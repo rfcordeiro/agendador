@@ -5,7 +5,7 @@ PY_BIN?=python3
 PYTHON=$(VENV)/bin/python3
 PIP=$(VENV)/bin/pip
 
-.PHONY: help venv backend-install backend-run backend-test backend-migrate frontend-install frontend-dev compose-up compose-down
+.PHONY: help venv backend-install backend-run backend-test backend-migrate backend-superuser frontend-install frontend-dev compose-up compose-down compose-reset compose-migrate compose-superuser
 
 help:
 	@echo "Common commands:"
@@ -33,6 +33,9 @@ backend-test: backend-install
 backend-migrate: backend-install
 	$(PYTHON) backend/manage.py migrate
 
+backend-superuser: backend-install
+	$(PYTHON) backend/manage.py createsuperuser
+
 frontend-install:
 	cd $(FRONTEND_DIR) && npm install
 
@@ -44,3 +47,12 @@ compose-up:
 
 compose-down:
 	docker compose down
+
+compose-reset:
+	docker compose down -v --remove-orphans && docker compose up -d --build
+
+compose-migrate:
+	docker compose exec backend python manage.py migrate
+
+compose-superuser:
+	docker compose exec backend python manage.py createsuperuser

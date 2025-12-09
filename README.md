@@ -12,5 +12,29 @@ Ferramenta de apoio para montar e revisar a escala das profissionais da clínica
 - Operação e rotinas (dev/prod): `docs/operacao.md`
 - Guia de contribuição: `AGENTS.md`
 
-## Estado atual
-Projeto ainda só com documentação. Próximo passo: adicionar `docker-compose.yml`/Makefile mínimos, modelos iniciais e endpoints para cadastros, geração/sync e dashboard.
+## Makefile (atalhos)
+- `make backend-install` — cria venv em `backend/.venv` e instala deps.
+- `make backend-migrate` — aplica migrations (SQLite por padrão ou Postgres se `POSTGRES_*` setados).
+- `make backend-test` — roda testes do Django.
+- `make backend-run` — sobe servidor dev em `localhost:8000`.
+- `make backend-superuser` — cria superusuário (interativo).
+- `make frontend-install` — instala deps do frontend (Vite/React).
+- `make frontend-dev` — roda dev server em `localhost:5173`.
+- `make compose-up` — sobe stack (backend, frontend, Postgres, Redis).
+- `make compose-down` — derruba stack.
+- `make compose-reset` — derruba stack removendo volumes e sobe de novo (zera Postgres).
+- `make compose-migrate` — roda migrations dentro do container backend.
+- `make compose-superuser` — cria superusuário dentro do container backend.
+
+## Ambiente de desenvolvimento (sem Docker)
+1. Copie `.env.example` para `.env` (opcional se usar SQLite).
+2. Backend: `make backend-migrate` e `make backend-run` (servidor em `http://localhost:8000/health`). Crie admin com `make backend-superuser` para acessar `/admin/`.
+3. Frontend: `make frontend-install` e `make frontend-dev` (servidor em `http://localhost:5173`).
+4. Para usar Postgres local, exporte `POSTGRES_*` apontando para seu serviço antes de rodar migrate/run.
+
+## Ambiente com Docker Compose
+1. `make compose-up` para subir backend/frontend/Postgres/Redis.
+2. `make compose-migrate` para criar as tabelas.
+3. `make compose-superuser` para criar usuário do admin.
+4. Acesse backend em `http://localhost:8000/health` e admin em `/admin/`; frontend em `http://localhost:5173`.
+5. Para resetar o banco: `make compose-reset` (apaga volumes e recria).
