@@ -8,7 +8,7 @@
 - **Sábados Savassi/Lourdes**: escala é combinada entre as profissionais (via WhatsApp) e lançada manualmente pelo admin; trocas acordadas são apenas registradas no sistema.
 
 ## Integração com Google Calendar
-- Uma agenda por profissional + uma agenda geral de controle.
+- Uma agenda adicional por profissional (nomeada, ex.: “[Tetê Araújo] Camila”) + uma agenda geral de controle; agendas são compartilhadas com cada profissional, não dependem do e-mail principal dele.
 - Leitura e escrita bidirecional. Em caso de conflito, o Google Calendar é a fonte de verdade (passado e futuro).
 - Possibilidade de apagar/regerar apenas eventos futuros mediante confirmação forte; eventos passados nunca são apagados pelo sistema.
 
