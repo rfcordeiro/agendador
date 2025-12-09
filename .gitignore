@@ -11,7 +11,10 @@ __pycache__/
 .venv/
 env/
 venv/
+backend/.venv/
 db.sqlite3
+.mypy_cache/
+.ruff_cache/
 
 # Django
 staticfiles/
