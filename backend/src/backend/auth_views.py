@@ -3,14 +3,14 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from django.contrib.auth import authenticate
+from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
 from django.http import HttpRequest
+from django.middleware.csrf import get_token
+from django.views.decorators.csrf import ensure_csrf_cookie
 from rest_framework import status
-from rest_framework.authentication import TokenAuthentication
-from rest_framework.authtoken.models import Token
-from rest_framework.decorators import api_view, authentication_classes, permission_classes
+from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -24,6 +24,14 @@ def _serialize_user(user: User) -> dict[str, Any]:
         "email": user.email,
         "role": role,
     }
+
+
+@api_view(["GET"])
+@permission_classes([])
+@ensure_csrf_cookie
+def csrf_view(_request: HttpRequest) -> Response:
+    # Forces the middleware to set the CSRF cookie
+    return Response({"detail": "CSRF cookie set."})
 
 
 @api_view(["POST"])
@@ -47,17 +55,14 @@ def login_view(request: HttpRequest) -> Response:
     if user is None or not isinstance(user, User):
         return Response({"detail": "Credenciais inválidas."}, status=status.HTTP_401_UNAUTHORIZED)
 
-    token, _ = Token.objects.get_or_create(user=user)
-    return Response(
-        {
-            "token": token.key,
-            "user": _serialize_user(user),
-        }
-    )
+    login(request, user)
+    # Ensure a CSRF token is available for subsequent POSTs
+    get_token(request)
+
+    return Response({"user": _serialize_user(user)})
 
 
 @api_view(["GET"])
-@authentication_classes([TokenAuthentication])
 @permission_classes([IsAuthenticated])
 def me_view(request: Request) -> Response:
     user = request.user
@@ -69,8 +74,7 @@ def me_view(request: Request) -> Response:
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def logout_view(request: Request) -> Response:
-    if isinstance(request.auth, Token):
-        Token.objects.filter(key=request.auth.key).delete()
+    logout(request)
     return Response(status=status.HTTP_204_NO_CONTENT)
 
 
@@ -106,13 +110,9 @@ def password_change_view(request: Request) -> Response:
     user.set_password(new_password)
     user.save()
 
-    Token.objects.filter(user=user).delete()
-    token = Token.objects.create(user=user)
-
     return Response(
         {
             "detail": "Senha alterada com sucesso.",
-            "token": token.key,
             "user": _serialize_user(user),
         }
     )

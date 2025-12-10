@@ -21,10 +21,27 @@ interface Credentials {
   password: string;
 }
 
-async function fetchMe(token: string): Promise<User> {
-  const response = await fetch("/api/auth/me", {
-    headers: { Authorization: `Token ${token}` },
-  });
+function readCsrfToken(): string | null {
+  const match = document.cookie
+    .split(";")
+    .map((part) => part.trim())
+    .find((part) => part.startsWith("csrftoken="));
+  return match ? decodeURIComponent(match.split("=")[1]) : null;
+}
+
+async function ensureCsrf(): Promise<string> {
+  const existing = readCsrfToken();
+  if (existing) return existing;
+  await fetch("/api/auth/csrf/", { credentials: "include" });
+  const token = readCsrfToken();
+  if (!token) {
+    throw new Error("Não foi possível obter o CSRF token.");
+  }
+  return token;
+}
+
+async function fetchMe(): Promise<User> {
+  const response = await fetch("/api/auth/me", { credentials: "include" });
 
   if (!response.ok) {
     throw new Error("Sessão expirada. Faça login novamente.");
@@ -76,12 +93,12 @@ const quickActions = [
   { label: "Ver inconsistências", tone: "ghost" },
 ];
 
-const LOCAL_TOKEN_KEY = "agendador.auth.token";
-
 async function authenticate(credentials: Credentials): Promise<AuthState> {
+  const csrf = await ensureCsrf();
   const response = await fetch("/api/auth/login", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    headers: { "Content-Type": "application/json", "X-CSRFToken": csrf },
     body: JSON.stringify(credentials),
   });
 
@@ -90,24 +107,9 @@ async function authenticate(credentials: Credentials): Promise<AuthState> {
   }
 
   const data = (await response.json().catch(() => ({}))) as Record<string, unknown>;
-  const token =
-    typeof data.token === "string"
-      ? data.token
-      : typeof data.access === "string"
-        ? data.access
-        : typeof data.key === "string"
-          ? data.key
-          : null;
-
-  if (!token) {
-    throw new Error("Resposta do backend sem token.");
-  }
-
   const userPayload = data.user as Partial<User> | undefined;
   const name =
-    userPayload?.name ??
-    (typeof data.username === "string" ? data.username : credentials.username) ??
-    "Usuário";
+    userPayload?.name ?? (typeof data.username === "string" ? data.username : credentials.username);
 
   const user: User = {
     name,
@@ -115,7 +117,7 @@ async function authenticate(credentials: Credentials): Promise<AuthState> {
     role: userPayload?.role ?? "operador",
   };
 
-  return { token, user };
+  return { token: "session", user };
 }
 
 function LoginScreen({
@@ -273,17 +275,12 @@ export default function App() {
   const [error, setError] = useState<AuthError | null>(null);
 
   useEffect(() => {
-    const storedToken = localStorage.getItem(LOCAL_TOKEN_KEY);
-    if (storedToken) {
-      fetchMe(storedToken)
-        .then((user) => setAuth({ token: storedToken, user }))
-        .catch(() => {
-          localStorage.removeItem(LOCAL_TOKEN_KEY);
-        })
-        .finally(() => setBooting(false));
-    } else {
-      setBooting(false);
-    }
+    fetchMe()
+      .then((user) => setAuth({ token: "session", user }))
+      .catch(() => {
+        /* not logged */
+      })
+      .finally(() => setBooting(false));
   }, []);
 
   const handleLogin = async (credentials: Credentials) => {
@@ -291,7 +288,6 @@ export default function App() {
     setError(null);
     try {
       const result = await authenticate(credentials);
-      localStorage.setItem(LOCAL_TOKEN_KEY, result.token);
       setAuth(result);
     } catch (exception) {
       const message =
@@ -303,17 +299,20 @@ export default function App() {
   };
 
   const handleLogout = () => {
-    const storedToken = localStorage.getItem(LOCAL_TOKEN_KEY);
-    if (storedToken) {
-      fetch("/api/auth/logout", {
-        method: "POST",
-        headers: { Authorization: `Token ${storedToken}` },
-      }).catch(() => {
+    ensureCsrf()
+      .then((csrf) =>
+        fetch("/api/auth/logout", {
+          method: "POST",
+          credentials: "include",
+          headers: { "X-CSRFToken": csrf },
+        })
+      )
+      .catch(() => {
         /* ignore logout errors */
+      })
+      .finally(() => {
+        setAuth(null);
       });
-    }
-    localStorage.removeItem(LOCAL_TOKEN_KEY);
-    setAuth(null);
   };
 
   if (booting) {

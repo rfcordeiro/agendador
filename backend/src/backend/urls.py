@@ -12,6 +12,7 @@ def healthcheck(_request: HttpRequest) -> JsonResponse:
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("health/", healthcheck),
+    path("api/auth/csrf/", auth_views.csrf_view, name="csrf"),
     path("api/auth/login", auth_views.login_view, name="login"),
     path("api/auth/logout", auth_views.logout_view, name="logout"),
     path("api/auth/me", auth_views.me_view, name="me"),
