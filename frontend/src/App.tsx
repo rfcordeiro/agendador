@@ -140,6 +140,9 @@ async function changePassword(input: ChangePasswordInput): Promise<void> {
   if (!response.ok) {
     const data = (await response.json().catch(() => ({}))) as Record<string, unknown>;
     const detail = typeof data.detail === "string" ? data.detail : null;
+    if (response.status === 403) {
+      throw new Error(detail ?? "Sessão expirada ou CSRF inválido. Faça login novamente.");
+    }
     throw new Error(detail ?? "Não foi possível trocar a senha.");
   }
 }
