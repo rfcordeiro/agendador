@@ -21,6 +21,28 @@ interface Credentials {
   password: string;
 }
 
+async function fetchMe(token: string): Promise<User> {
+  const response = await fetch("/api/auth/me", {
+    headers: { Authorization: `Token ${token}` },
+  });
+
+  if (!response.ok) {
+    throw new Error("Sessão expirada. Faça login novamente.");
+  }
+
+  const data = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+  const userPayload = data.user as Partial<User> | undefined;
+  if (!userPayload) {
+    throw new Error("Resposta do backend sem usuário.");
+  }
+
+  return {
+    name: userPayload.name ?? "Usuário",
+    email: userPayload.email ?? "",
+    role: userPayload.role ?? "operador",
+  };
+}
+
 const navItems = [
   { label: "Dashboard", icon: "📊" },
   { label: "Profissionais", icon: "👥" },
@@ -246,20 +268,21 @@ function Dashboard({ user, onLogout }: { user: User; onLogout: () => void }) {
 
 export default function App() {
   const [auth, setAuth] = useState<AuthState | null>(null);
+  const [booting, setBooting] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<AuthError | null>(null);
 
   useEffect(() => {
     const storedToken = localStorage.getItem(LOCAL_TOKEN_KEY);
     if (storedToken) {
-      setAuth({
-        token: storedToken,
-        user: {
-          name: "Usuário autenticado",
-          email: "",
-          role: "operador",
-        },
-      });
+      fetchMe(storedToken)
+        .then((user) => setAuth({ token: storedToken, user }))
+        .catch(() => {
+          localStorage.removeItem(LOCAL_TOKEN_KEY);
+        })
+        .finally(() => setBooting(false));
+    } else {
+      setBooting(false);
     }
   }, []);
 
@@ -280,9 +303,28 @@ export default function App() {
   };
 
   const handleLogout = () => {
+    const storedToken = localStorage.getItem(LOCAL_TOKEN_KEY);
+    if (storedToken) {
+      fetch("/api/auth/logout", {
+        method: "POST",
+        headers: { Authorization: `Token ${storedToken}` },
+      }).catch(() => {
+        /* ignore logout errors */
+      });
+    }
     localStorage.removeItem(LOCAL_TOKEN_KEY);
     setAuth(null);
   };
+
+  if (booting) {
+    return (
+      <div className="login-shell">
+        <div className="login-card">
+          <p className="eyebrow">Carregando sessão...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!auth) {
     return <LoginScreen onLogin={handleLogin} loading={loading} error={error} />;
