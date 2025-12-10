@@ -18,7 +18,7 @@
 
 ## Fluxo de desenvolvimento
 - Sempre que possível, use `make compose-up` e `make compose-migrate`. Para desenvolvimento rápido, `make backend-migrate` + `make backend-run` (SQLite) são válidos.
-- Crie branches a partir de `main`: `feature/<issue>-<slug>`, `fix/<issue>-<slug>`, `chore/<slug>`, `docs/<slug>`. Commits seguem Conventional Commits.
+- Crie branches a partir de `master`: `feature/<issue>-<slug>`, `fix/<issue>-<slug>`, `chore/<slug>`, `docs/<slug>`. Commits seguem Conventional Commits.
 - PRs pequenas e focadas; descreva objetivo, riscos, e comandos de teste executados. Inclua screenshots ou logs para mudanças de UI/operacionais.
 
 ## Estilo de código (backend)
@@ -50,7 +50,7 @@
 
 ## Infra, CI/CD e deploy
 - CI: GitHub Actions rodando `ruff check/format --check`, `mypy`, testes backend; `npm test`, `npm run lint`, `npm run typecheck` (quando TypeScript) no frontend.
-- Deploy: build de imagens Docker versionadas. Pipeline futura: `main` → staging (Hetzner homolog) → produção com aprovação manual. `.env` separado por ambiente.
+- Deploy: build de imagens Docker versionadas. Pipeline futura: `master` → staging (Hetzner homolog) → produção com aprovação manual. `.env` separado por ambiente.
 - Observabilidade: logs estruturados; não logar dados sensíveis. Registrar execuções de jobs e diffs de escala.
 
 ## Segurança e dados
