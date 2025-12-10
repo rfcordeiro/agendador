@@ -80,13 +80,13 @@ jobs:
 
             printf '%s' "${{ secrets.STAGING_ENV_FILE }}" > .env
 
-            cat > docker-compose.override.yml <<EOF
-services:
-  backend:
-    image: ${IMAGE_BACKEND}:staging-${GITHUB_SHA}
-  frontend:
-    image: ${IMAGE_FRONTEND}:staging-${GITHUB_SHA}
-EOF
+            printf '%s\n' \
+              "services:" \
+              "  backend:" \
+              "    image: ${IMAGE_BACKEND}:staging-${GITHUB_SHA}" \
+              "  frontend:" \
+              "    image: ${IMAGE_FRONTEND}:staging-${GITHUB_SHA}" \
+              > docker-compose.override.yml
 
             echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u "${{ secrets.GHCR_USER }}" --password-stdin
             docker compose pull
