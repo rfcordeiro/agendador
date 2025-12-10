@@ -18,3 +18,4 @@
 - Exportar resumo em CSV/JSON.
 - Prompt box para replanejamento com diff pré-execução.
 - Ações manuais: editar via drag-and-drop, aprovar/publicar no Google, limpar eventos futuros do sistema com dupla confirmação, registrar escala de sábado (Savassi/Lourdes) e trocas entre profissionais.
+
