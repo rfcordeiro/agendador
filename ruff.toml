@@ -1,0 +1,22 @@
+line-length = 100
+target-version = "py312"
+src = ["backend/src", "backend/tests"]
+extend-exclude = [".venv", "migrations"]
+
+[lint]
+select = [
+    "E", "F",  # pycodestyle/pyflakes
+    "I",       # isort
+    "B",       # flake8-bugbear
+    "UP",      # pyupgrade
+    "S",       # flake8-bandit (segurança)
+    "ASYNC",   # regras async
+    "SIM",     # flake8-simplify
+]
+ignore = ["S101"]  # asserts permitidos em testes
+
+[format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "lf"

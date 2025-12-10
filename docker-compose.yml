@@ -27,6 +27,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-agendador}
       POSTGRES_HOST: db
       POSTGRES_PORT: 5432
+      PYTHONPATH: /app/src
       SECRET_KEY: ${SECRET_KEY:-dev-secret}
     ports:
       - "8000:8000"

@@ -1,7 +1,9 @@
 import os
 from pathlib import Path
 
-BASE_DIR = Path(__file__).resolve().parent.parent
+# Project root (`backend/`)
+BASE_DIR = Path(__file__).resolve().parents[2]
+SRC_DIR = BASE_DIR / "src"
 
 SECRET_KEY = os.environ.get("SECRET_KEY", "dev-secret-change-me")
 DEBUG = os.environ.get("DEBUG", "true").lower() == "true"
