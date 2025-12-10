@@ -48,6 +48,7 @@ Staging:
 - `HETZNER_STAGING_USER`: usuário SSH (ex.: `root` ou `deploy` no grupo `docker`).
 - `HETZNER_STAGING_SSH_KEY`: chave privada para SSH.
 - `STAGING_ENV_FILE`: conteúdo completo do `.env` (multilinha).
+- (Opcional) `STAGING_SUPERUSER_USERNAME`, `STAGING_SUPERUSER_EMAIL`, `STAGING_SUPERUSER_PASSWORD`: cria/atualiza superusuário com `createsuperuser --noinput` após subir containers.
 
 Produção:
 - `HETZNER_PROD_HOST`, `HETZNER_PROD_USER`, `HETZNER_PROD_SSH_KEY`.

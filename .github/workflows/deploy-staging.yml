@@ -95,3 +95,14 @@ jobs:
             echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u "${{ secrets.GHCR_USER }}" --password-stdin
             docker compose pull
             docker compose up -d --remove-orphans
+            docker compose exec backend python manage.py migrate
+
+            if [ -n "${{ secrets.STAGING_SUPERUSER_USERNAME }}" ] && \
+               [ -n "${{ secrets.STAGING_SUPERUSER_EMAIL }}" ] && \
+               [ -n "${{ secrets.STAGING_SUPERUSER_PASSWORD }}" ]; then
+              docker compose exec \
+                -e DJANGO_SUPERUSER_USERNAME="${{ secrets.STAGING_SUPERUSER_USERNAME }}" \
+                -e DJANGO_SUPERUSER_EMAIL="${{ secrets.STAGING_SUPERUSER_EMAIL }}" \
+                -e DJANGO_SUPERUSER_PASSWORD="${{ secrets.STAGING_SUPERUSER_PASSWORD }}" \
+                backend python manage.py createsuperuser --noinput || true
+            fi
