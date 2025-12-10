@@ -176,6 +176,15 @@ p {
   font-weight: 600;
 }
 
+.success {
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(22, 163, 74, 0.2);
+  background: rgba(22, 163, 74, 0.08);
+  color: #166534;
+  font-weight: 600;
+}
+
 .app-shell {
   min-height: 100vh;
   display: grid;
@@ -359,6 +368,18 @@ p {
   padding-left: 20px;
   color: var(--color-ink-muted);
   line-height: 1.6;
+}
+
+.account-form {
+  margin-top: 12px;
+  display: grid;
+  gap: 12px;
+}
+
+.account-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 @media (max-width: 960px) {

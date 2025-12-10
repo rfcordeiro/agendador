@@ -21,6 +21,11 @@ interface Credentials {
   password: string;
 }
 
+interface ChangePasswordInput {
+  oldPassword: string;
+  newPassword: string;
+}
+
 function readCsrfToken(): string | null {
   const match = document.cookie
     .split(";")
@@ -120,6 +125,22 @@ async function authenticate(credentials: Credentials): Promise<AuthState> {
   return { token: "session", user };
 }
 
+async function changePassword(input: ChangePasswordInput): Promise<void> {
+  const csrf = await ensureCsrf();
+  const response = await fetch("/api/auth/password/change", {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json", "X-CSRFToken": csrf },
+    body: JSON.stringify({ old_password: input.oldPassword, new_password: input.newPassword }),
+  });
+
+  if (!response.ok) {
+    const data = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+    const detail = typeof data.detail === "string" ? data.detail : null;
+    throw new Error(detail ?? "Não foi possível trocar a senha.");
+  }
+}
+
 function LoginScreen({
   onLogin,
   loading,
@@ -184,13 +205,51 @@ function LoginScreen({
   );
 }
 
-function Dashboard({ user, onLogout }: { user: User; onLogout: () => void }) {
+function Dashboard({
+  user,
+  onLogout,
+  onPasswordChange,
+}: {
+  user: User;
+  onLogout: () => void;
+  onPasswordChange: (input: ChangePasswordInput) => Promise<void>;
+}) {
   const greeting = useMemo(() => {
     const hour = new Date().getHours();
     if (hour < 12) return "Bom dia";
     if (hour < 18) return "Boa tarde";
     return "Boa noite";
   }, []);
+  const [oldPassword, setOldPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
+
+  const handlePasswordSubmit = async (event: FormEvent) => {
+    event.preventDefault();
+    setPasswordError(null);
+    setPasswordSuccess(null);
+    if (newPassword !== confirmPassword) {
+      setPasswordError("As senhas não conferem.");
+      return;
+    }
+    setPasswordLoading(true);
+    try {
+      await onPasswordChange({ oldPassword, newPassword });
+      setPasswordSuccess("Senha atualizada com sucesso.");
+      setOldPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (exception) {
+      const message =
+        exception instanceof Error ? exception.message : "Erro ao trocar a senha.";
+      setPasswordError(message);
+    } finally {
+      setPasswordLoading(false);
+    }
+  };
 
   return (
     <div className="app-shell">
@@ -263,6 +322,55 @@ function Dashboard({ user, onLogout }: { user: User; onLogout: () => void }) {
             ))}
           </ul>
         </section>
+
+        <section className="panel">
+          <div className="panel-header">
+            <h2>Minha conta</h2>
+            <span className="badge">Troca de senha</span>
+          </div>
+          <form className="account-form" onSubmit={handlePasswordSubmit}>
+            <label className="field">
+              <span>Senha atual</span>
+              <input
+                required
+                type="password"
+                autoComplete="current-password"
+                value={oldPassword}
+                onChange={(event) => setOldPassword(event.target.value)}
+              />
+            </label>
+            <label className="field">
+              <span>Nova senha</span>
+              <input
+                required
+                type="password"
+                autoComplete="new-password"
+                value={newPassword}
+                onChange={(event) => setNewPassword(event.target.value)}
+              />
+            </label>
+            <label className="field">
+              <span>Confirmar nova senha</span>
+              <input
+                required
+                type="password"
+                autoComplete="new-password"
+                value={confirmPassword}
+                onChange={(event) => setConfirmPassword(event.target.value)}
+              />
+            </label>
+            {passwordError ? <div className="alert">{passwordError}</div> : null}
+            {passwordSuccess ? <div className="success">{passwordSuccess}</div> : null}
+            <div className="account-actions">
+              <button type="submit" className="primary-button" disabled={passwordLoading}>
+                {passwordLoading ? "Salvando..." : "Atualizar senha"}
+              </button>
+              <button type="button" className="ghost-button" onClick={onLogout}>
+                Sair da sessão
+              </button>
+            </div>
+          </form>
+        </section>
       </main>
     </div>
   );
@@ -329,5 +437,11 @@ export default function App() {
     return <LoginScreen onLogin={handleLogin} loading={loading} error={error} />;
   }
 
-  return <Dashboard user={auth.user} onLogout={handleLogout} />;
+  return (
+    <Dashboard
+      user={auth.user}
+      onLogout={handleLogout}
+      onPasswordChange={(input) => changePassword(input)}
+    />
+  );
 }
