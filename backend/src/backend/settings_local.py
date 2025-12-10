@@ -1,1 +1,1 @@
-# Local overrides (optional). Import by setting DJANGO_SETTINGS_MODULE=backend.settings_local if needed.
+# Local overrides (opcional). Use DJANGO_SETTINGS_MODULE=backend.settings_local se precisar.

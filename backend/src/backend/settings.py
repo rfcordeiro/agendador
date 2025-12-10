@@ -52,7 +52,7 @@ ASGI_APPLICATION = "backend.asgi.application"
 
 
 def _db_from_env() -> dict:
-    """Select Postgres if env vars are present; otherwise fall back to sqlite for local dev/tests."""
+    """Select Postgres if env vars are present; fallback to sqlite for local dev/tests."""
     host = os.environ.get("POSTGRES_HOST")
     name = os.environ.get("POSTGRES_DB")
     user = os.environ.get("POSTGRES_USER")
