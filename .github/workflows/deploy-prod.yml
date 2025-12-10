@@ -85,17 +85,15 @@ jobs:
             git checkout master
             git reset --hard origin/master
 
-            cat > .env <<'EOF'
-${{ secrets.PROD_ENV_FILE }}
-EOF
+            printf '%s' "${{ secrets.PROD_ENV_FILE }}" > .env
 
-            cat > docker-compose.override.yml <<EOF
-services:
-  backend:
-    image: ${IMAGE_BACKEND}:prod-${GITHUB_SHA}
-  frontend:
-    image: ${IMAGE_FRONTEND}:prod-${GITHUB_SHA}
-EOF
+            printf '%s\n' \
+              "services:" \
+              "  backend:" \
+              "    image: ${IMAGE_BACKEND}:prod-${GITHUB_SHA}" \
+              "  frontend:" \
+              "    image: ${IMAGE_FRONTEND}:prod-${GITHUB_SHA}" \
+              > docker-compose.override.yml
 
             echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u "${{ secrets.GHCR_USER }}" --password-stdin
             docker compose pull
