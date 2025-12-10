@@ -47,12 +47,12 @@ Staging:
 - `HETZNER_STAGING_HOST`: IP ou hostname.
 - `HETZNER_STAGING_USER`: usuário SSH (ex.: `root` ou `deploy` no grupo `docker`).
 - `HETZNER_STAGING_SSH_KEY`: chave privada para SSH.
-- `STAGING_ENV_FILE`: conteúdo completo do `.env` (multilinha).
+- `STAGING_ENV_FILE`: conteúdo completo do `.env` (multilinha). Defina `DEBUG=false` para não exibir páginas de debug.
 - (Opcional) `STAGING_SUPERUSER_USERNAME`, `STAGING_SUPERUSER_EMAIL`, `STAGING_SUPERUSER_PASSWORD`: cria/atualiza superusuário com `createsuperuser --noinput` após subir containers.
 
 Produção:
 - `HETZNER_PROD_HOST`, `HETZNER_PROD_USER`, `HETZNER_PROD_SSH_KEY`.
-- `PROD_ENV_FILE`: conteúdo do `.env` de produção (multilinha).
+- `PROD_ENV_FILE`: conteúdo do `.env` de produção (multilinha). Defina `DEBUG=false` (padrão já é false, mas mantenha explícito).
 
 ## Fluxo de deploy
 1) Staging: push na `master` → `deploy-staging.yml` builda/pusha imagens → conecta na VM staging, atualiza o repo, grava `.env` com `STAGING_ENV_FILE`, gera `docker-compose.override.yml` com tags de staging, roda `docker compose pull && docker compose up -d`.
