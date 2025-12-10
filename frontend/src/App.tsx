@@ -26,6 +26,8 @@ interface ChangePasswordInput {
   newPassword: string;
 }
 
+type Page = "dashboard" | "account";
+
 function readCsrfToken(): string | null {
   const match = document.cookie
     .split(";")
@@ -66,12 +68,13 @@ async function fetchMe(): Promise<User> {
 }
 
 const navItems = [
-  { label: "Dashboard", icon: "📊" },
+  { label: "Dashboard", icon: "📊", page: "dashboard" as Page },
   { label: "Profissionais", icon: "👥" },
   { label: "Locais", icon: "🏥" },
   { label: "Escalas", icon: "📅" },
   { label: "Publicação", icon: "☁️" },
   { label: "Auditoria", icon: "📝" },
+  { label: "Minha conta", icon: "👤", page: "account" as Page },
 ];
 
 const metricsCards = [
@@ -209,10 +212,14 @@ function Dashboard({
   user,
   onLogout,
   onPasswordChange,
+  page,
+  onNavigate,
 }: {
   user: User;
   onLogout: () => void;
   onPasswordChange: (input: ChangePasswordInput) => Promise<void>;
+  page: Page;
+  onNavigate: (page: Page) => void;
 }) {
   const greeting = useMemo(() => {
     const hour = new Date().getHours();
@@ -263,7 +270,11 @@ function Dashboard({
         </div>
         <nav className="nav">
           {navItems.map((item) => (
-            <button key={item.label} className="nav-item active">
+            <button
+              key={item.label}
+              className={`nav-item${item.page === page ? " active" : ""}`}
+              onClick={() => (item.page ? onNavigate(item.page) : undefined)}
+            >
               <span aria-hidden>{item.icon}</span>
               {item.label}
             </button>
@@ -281,96 +292,100 @@ function Dashboard({
       </aside>
 
       <main className="main">
-        <header className="topbar">
-          <div>
-            <p className="eyebrow">Dashboard</p>
-            <h1>
-              {greeting}, {user.name}
-            </h1>
-            <p className="lede">
-              Estado da escala, pendências e atalhos para publicar ou revisar. Animações virão na
-              próxima iteração.
-            </p>
-          </div>
-          <div className="topbar-actions">
-            {quickActions.map((action) => (
-              <button key={action.label} className={`pill action-${action.tone}`}>
-                {action.label}
-              </button>
-            ))}
-          </div>
-        </header>
+        {page === "dashboard" ? (
+          <>
+            <header className="topbar">
+              <div>
+                <p className="eyebrow">Dashboard</p>
+                <h1>
+                  {greeting}, {user.name}
+                </h1>
+                <p className="lede">
+                  Estado da escala, pendências e atalhos para publicar ou revisar. Animações virão
+                  na próxima iteração.
+                </p>
+              </div>
+              <div className="topbar-actions">
+                {quickActions.map((action) => (
+                  <button key={action.label} className={`pill action-${action.tone}`}>
+                    {action.label}
+                  </button>
+                ))}
+              </div>
+            </header>
 
-        <section className="cards-grid">
-          {metricsCards.map((card) => (
-            <article key={card.title} className="card" data-tone={card.tone}>
-              <p className="card-title">{card.title}</p>
-              <h2>{card.value}</h2>
-              <p className="card-detail">{card.detail}</p>
-            </article>
-          ))}
-        </section>
+            <section className="cards-grid">
+              {metricsCards.map((card) => (
+                <article key={card.title} className="card" data-tone={card.tone}>
+                  <p className="card-title">{card.title}</p>
+                  <h2>{card.value}</h2>
+                  <p className="card-detail">{card.detail}</p>
+                </article>
+              ))}
+            </section>
 
-        <section className="panel">
-          <div className="panel-header">
-            <h2>Próximos passos</h2>
-            <span className="badge">Autenticação ativa</span>
-          </div>
-          <ul className="bullet-list">
-            {highlights.map((item) => (
-              <li key={item}>{item}</li>
-            ))}
-          </ul>
-        </section>
-
-        <section className="panel">
-          <div className="panel-header">
-            <h2>Minha conta</h2>
-            <span className="badge">Troca de senha</span>
-          </div>
-          <form className="account-form" onSubmit={handlePasswordSubmit}>
-            <label className="field">
-              <span>Senha atual</span>
-              <input
-                required
-                type="password"
-                autoComplete="current-password"
-                value={oldPassword}
-                onChange={(event) => setOldPassword(event.target.value)}
-              />
-            </label>
-            <label className="field">
-              <span>Nova senha</span>
-              <input
-                required
-                type="password"
-                autoComplete="new-password"
-                value={newPassword}
-                onChange={(event) => setNewPassword(event.target.value)}
-              />
-            </label>
-            <label className="field">
-              <span>Confirmar nova senha</span>
-              <input
-                required
-                type="password"
-                autoComplete="new-password"
-                value={confirmPassword}
-                onChange={(event) => setConfirmPassword(event.target.value)}
-              />
-            </label>
-            {passwordError ? <div className="alert">{passwordError}</div> : null}
-            {passwordSuccess ? <div className="success">{passwordSuccess}</div> : null}
-            <div className="account-actions">
-              <button type="submit" className="primary-button" disabled={passwordLoading}>
-                {passwordLoading ? "Salvando..." : "Atualizar senha"}
-              </button>
-              <button type="button" className="ghost-button" onClick={onLogout}>
-                Sair da sessão
-              </button>
+            <section className="panel">
+              <div className="panel-header">
+                <h2>Próximos passos</h2>
+                <span className="badge">Autenticação ativa</span>
+              </div>
+              <ul className="bullet-list">
+                {highlights.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            </section>
+          </>
+        ) : (
+          <section className="panel">
+            <div className="panel-header">
+              <h2>Minha conta</h2>
+              <span className="badge">Troca de senha</span>
             </div>
-          </form>
-        </section>
+            <form className="account-form" onSubmit={handlePasswordSubmit}>
+              <label className="field">
+                <span>Senha atual</span>
+                <input
+                  required
+                  type="password"
+                  autoComplete="current-password"
+                  value={oldPassword}
+                  onChange={(event) => setOldPassword(event.target.value)}
+                />
+              </label>
+              <label className="field">
+                <span>Nova senha</span>
+                <input
+                  required
+                  type="password"
+                  autoComplete="new-password"
+                  value={newPassword}
+                  onChange={(event) => setNewPassword(event.target.value)}
+                />
+              </label>
+              <label className="field">
+                <span>Confirmar nova senha</span>
+                <input
+                  required
+                  type="password"
+                  autoComplete="new-password"
+                  value={confirmPassword}
+                  onChange={(event) => setConfirmPassword(event.target.value)}
+                />
+              </label>
+              {passwordError ? <div className="alert">{passwordError}</div> : null}
+              {passwordSuccess ? <div className="success">{passwordSuccess}</div> : null}
+              <div className="account-actions">
+                <button type="submit" className="primary-button" disabled={passwordLoading}>
+                  {passwordLoading ? "Salvando..." : "Atualizar senha"}
+                </button>
+                <button type="button" className="ghost-button" onClick={onLogout}>
+                  Sair da sessão
+                </button>
+              </div>
+            </form>
+          </section>
+        )}
       </main>
     </div>
   );
@@ -379,6 +394,7 @@ function Dashboard({
 export default function App() {
   const [auth, setAuth] = useState<AuthState | null>(null);
   const [booting, setBooting] = useState(true);
+  const [page, setPage] = useState<Page>("dashboard");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<AuthError | null>(null);
 
@@ -442,6 +458,8 @@ export default function App() {
       user={auth.user}
       onLogout={handleLogout}
       onPasswordChange={(input) => changePassword(input)}
+      page={page}
+      onNavigate={setPage}
     />
   );
 }
