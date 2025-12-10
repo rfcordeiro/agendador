@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Mapping
 from typing import Any
 
 from django.contrib.auth import authenticate, login, logout
@@ -36,11 +37,15 @@ def csrf_view(_request: HttpRequest) -> Response:
 
 @api_view(["POST"])
 @permission_classes([])  # allow anonymous
-def login_view(request: HttpRequest) -> Response:
-    try:
-        payload = json.loads(request.body or "{}")
-    except json.JSONDecodeError:
-        return Response({"detail": "JSON inválido."}, status=status.HTTP_400_BAD_REQUEST)
+def login_view(request: Request) -> Response:
+    payload: Mapping[str, Any]
+    if isinstance(request.data, Mapping):
+        payload = request.data
+    else:
+        try:
+            payload = json.loads(request.body or "{}")
+        except json.JSONDecodeError:
+            return Response({"detail": "JSON inválido."}, status=status.HTTP_400_BAD_REQUEST)
 
     username = (payload.get("username") or payload.get("email") or "").strip()
     password = (payload.get("password") or "").strip()
@@ -81,10 +86,14 @@ def logout_view(request: Request) -> Response:
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def password_change_view(request: Request) -> Response:
-    try:
-        payload = json.loads(request.body or "{}")
-    except json.JSONDecodeError:
-        return Response({"detail": "JSON inválido."}, status=status.HTTP_400_BAD_REQUEST)
+    payload: Mapping[str, Any]
+    if isinstance(request.data, Mapping):
+        payload = request.data
+    else:
+        try:
+            payload = json.loads(request.body or "{}")
+        except json.JSONDecodeError:
+            return Response({"detail": "JSON inválido."}, status=status.HTTP_400_BAD_REQUEST)
 
     old_password = (payload.get("old_password") or "").strip()
     new_password = (payload.get("new_password") or "").strip()
