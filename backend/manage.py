@@ -4,7 +4,7 @@ import sys
 from pathlib import Path
 
 
-def main():
+def main() -> None:
     # Ensure the `src` directory is on the path so Django can find the project package.
     project_root = Path(__file__).resolve().parent
     sys.path.append(str(project_root / "src"))
