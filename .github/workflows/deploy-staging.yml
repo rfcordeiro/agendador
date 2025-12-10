@@ -1,0 +1,95 @@
+name: Deploy Staging
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch: {}
+
+concurrency:
+  group: deploy-staging-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_BACKEND: ghcr.io/${{ github.repository_owner }}/agendador-backend
+  IMAGE_FRONTEND: ghcr.io/${{ github.repository_owner }}/agendador-frontend
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build & push backend image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          push: true
+          tags: |
+            ${{ env.IMAGE_BACKEND }}:staging-${{ github.sha }}
+            ${{ env.IMAGE_BACKEND }}:staging-latest
+
+      - name: Build & push frontend image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          push: true
+          tags: |
+            ${{ env.IMAGE_FRONTEND }}:staging-${{ github.sha }}
+            ${{ env.IMAGE_FRONTEND }}:staging-latest
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy via SSH to Hetzner staging
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.HETZNER_STAGING_HOST }}
+          username: ${{ secrets.HETZNER_STAGING_USER }}
+          key: ${{ secrets.HETZNER_STAGING_SSH_KEY }}
+          envs: IMAGE_BACKEND,IMAGE_FRONTEND,GITHUB_SHA
+          script: |
+            set -euo pipefail
+            export GIT_TERMINAL_PROMPT=0
+            REPO_URL="https://github.com/${{ github.repository }}"
+            if [ -n "${{ secrets.REPO_READ_TOKEN }}" ]; then
+              REPO_URL="https://oauth2:${{ secrets.REPO_READ_TOKEN }}@github.com/${{ github.repository }}"
+            fi
+
+            if [ ! -d "$HOME/agendador" ]; then
+              git clone "$REPO_URL" "$HOME/agendador"
+            fi
+
+            cd "$HOME/agendador"
+            git fetch origin master
+            git checkout master
+            git reset --hard origin/master
+
+            cat > .env <<'EOF'
+${{ secrets.STAGING_ENV_FILE }}
+EOF
+
+            cat > docker-compose.override.yml <<EOF
+services:
+  backend:
+    image: ${IMAGE_BACKEND}:staging-${GITHUB_SHA}
+  frontend:
+    image: ${IMAGE_FRONTEND}:staging-${GITHUB_SHA}
+EOF
+
+            echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u "${{ secrets.GHCR_USER }}" --password-stdin
+            docker compose pull
+            docker compose up -d --remove-orphans

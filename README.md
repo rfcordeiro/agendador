@@ -10,6 +10,8 @@ Ferramenta de apoio para montar e revisar a escala das profissionais da clínica
 - Dashboard e métricas: `docs/dashboard.md`
 - Arquitetura técnica proposta: `docs/tecnica.md`
 - Operação e rotinas (dev/prod): `docs/operacao.md`
+- Deploy Hetzner (staging/prod): `docs/deploy-hetzner.md`
+- Setup dev WSL: `docs/dev-setup-wsl.md`
 - Guia de contribuição: `AGENTS.md`
 
 ## Makefile (atalhos)
