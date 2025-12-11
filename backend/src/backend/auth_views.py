@@ -25,6 +25,8 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.throttling import SimpleRateThrottle
 
+logger = logging.getLogger(__name__)
+
 
 class LoginRateThrottle(SimpleRateThrottle):
     """Limit login attempts per IP to reduce brute-force."""
@@ -36,6 +38,39 @@ class LoginRateThrottle(SimpleRateThrottle):
         if not ident:
             return None
         return self.cache_format % {"scope": self.scope, "ident": ident}
+
+
+def _get_client_ip(request: Request) -> str:
+    forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR")
+    if forwarded_for:
+        return forwarded_for.split(",")[0].strip()
+    return request.META.get("REMOTE_ADDR", "")
+
+
+def _get_user_agent(request: Request) -> str:
+    return request.META.get("HTTP_USER_AGENT", "")
+
+
+def _log_auth_event(
+    action: str,
+    status: str,
+    request: Request,
+    *,
+    user: User | None = None,
+    username: str | None = None,
+) -> None:
+    user_identifier = username or (user.username if user else None)
+    payload = {
+        "action": action,
+        "status": status,
+        "user": user_identifier or "anonymous",
+        "user_id": user.id if user else None,
+        "ip": _get_client_ip(request),
+        "user_agent": _get_user_agent(request),
+        "path": request.path,
+        "method": request.method,
+    }
+    logger.info("auth_event %s", json.dumps(payload))
 
 
 class PasswordResetRateThrottle(SimpleRateThrottle):
@@ -94,6 +129,7 @@ def login_view(request: Request) -> Response:
     password = (payload.get("password") or "").strip()
 
     if not username or not password:
+        _log_auth_event("login", "missing_credentials", request, username=username)
         return Response(
             {"detail": "Usuário e senha são obrigatórios."},
             status=status.HTTP_400_BAD_REQUEST,
@@ -101,9 +137,11 @@ def login_view(request: Request) -> Response:
 
     user = authenticate(request, username=username, password=password)
     if user is None or not isinstance(user, User):
+        _log_auth_event("login", "invalid_credentials", request, username=username)
         return Response({"detail": "Credenciais inválidas."}, status=status.HTTP_401_UNAUTHORIZED)
 
     login(request, user)
+    _log_auth_event("login", "success", request, user=user)
     # Ensure a CSRF token is available for subsequent POSTs
     get_token(request)
 
@@ -122,7 +160,9 @@ def me_view(request: Request) -> Response:
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def logout_view(request: Request) -> Response:
+    user = request.user if isinstance(request.user, User) else None
     logout(request)
+    _log_auth_event("logout", "success", request, user=user)
     return Response(status=status.HTTP_204_NO_CONTENT)
 
 
@@ -140,27 +180,33 @@ def password_change_view(request: Request) -> Response:
 
     old_password = (payload.get("old_password") or "").strip()
     new_password = (payload.get("new_password") or "").strip()
+    user_for_log = request.user if isinstance(request.user, User) else None
 
     if not old_password or not new_password:
+        _log_auth_event("password_change", "missing_fields", request, user=user_for_log)
         return Response(
             {"detail": "Campos obrigatórios faltando."},
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-    user = request.user
-    if not isinstance(user, User):
+    if not isinstance(request.user, User):
+        _log_auth_event("password_change", "invalid_session", request)
         return Response({"detail": "Sessão inválida."}, status=status.HTTP_401_UNAUTHORIZED)
 
+    user = request.user
     if not user.check_password(old_password):
+        _log_auth_event("password_change", "invalid_current_password", request, user=user)
         return Response({"detail": "Senha atual inválida."}, status=status.HTTP_400_BAD_REQUEST)
 
     try:
         validate_password(new_password, user=user)
     except Exception as exc:  # noqa: BLE001
+        _log_auth_event("password_change", "password_validation_failed", request, user=user)
         return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
 
     user.set_password(new_password)
     user.save()
+    _log_auth_event("password_change", "success", request, user=user)
 
     return Response(
         {
@@ -168,9 +214,6 @@ def password_change_view(request: Request) -> Response:
             "user": _serialize_user(user),
         }
     )
-
-
-logger = logging.getLogger(__name__)
 
 
 @api_view(["POST"])
