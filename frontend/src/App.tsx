@@ -1264,7 +1264,8 @@ function ProfissionaisPage() {
                           turno_preferencial: profissional.turno_preferencial,
                           classificacao: profissional.classificacao || 'estagiaria',
                           valor_diaria:
-                            profissional.valor_diaria !== null && profissional.valor_diaria !== undefined
+                            profissional.valor_diaria !== null &&
+                            profissional.valor_diaria !== undefined
                               ? String(profissional.valor_diaria)
                               : '',
                           valor_salario_mensal:
@@ -1568,7 +1569,12 @@ function ProfissionaisPage() {
             <span>
               Link para contrato (Drive)
               {contratoLink ? (
-                <a className="pill pill-soft inline-pill" href={contratoLink} target="_blank" rel="noreferrer">
+                <a
+                  className="pill pill-soft inline-pill"
+                  href={contratoLink}
+                  target="_blank"
+                  rel="noreferrer"
+                >
                   Ver PDF
                 </a>
               ) : null}
@@ -1614,9 +1620,7 @@ function ProfissionaisPage() {
               <input
                 value={form.inscricao_municipal}
                 disabled={!isMeiOuFreelancer}
-                onChange={(event) =>
-                  setForm({ ...form, inscricao_municipal: event.target.value })
-                }
+                onChange={(event) => setForm({ ...form, inscricao_municipal: event.target.value })}
                 placeholder="Opcional"
               />
             </label>
