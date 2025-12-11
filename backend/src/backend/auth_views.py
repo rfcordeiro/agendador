@@ -6,15 +6,17 @@ from collections.abc import Mapping
 from typing import Any
 
 from django.conf import settings
-from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
+from django.contrib.sessions.models import Session
 from django.core.exceptions import ValidationError
 from django.core.mail import send_mail
 from django.core.validators import validate_email
 from django.http import HttpRequest
 from django.middleware.csrf import get_token
+from django.utils import timezone
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from django.views.decorators.csrf import ensure_csrf_cookie
@@ -71,6 +73,23 @@ def _log_auth_event(
         "method": request.method,
     }
     logger.info("auth_event %s", json.dumps(payload))
+
+
+def _delete_other_sessions(user_id: int, current_session_key: str | None) -> None:
+    active_sessions = Session.objects.filter(expire_date__gt=timezone.now())
+    for session in active_sessions.iterator():
+        try:
+            data = session.get_decoded()
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Falha ao decodificar sessão ao invalidar outras sessões: %s", exc)
+            continue
+
+        session_user_id = data.get("_auth_user_id")
+        if session_user_id is None:
+            continue
+
+        if str(session_user_id) == str(user_id) and session.session_key != current_session_key:
+            session.delete()
 
 
 class PasswordResetRateThrottle(SimpleRateThrottle):
@@ -141,6 +160,7 @@ def login_view(request: Request) -> Response:
         return Response({"detail": "Credenciais inválidas."}, status=status.HTTP_401_UNAUTHORIZED)
 
     login(request, user)
+    request.session.cycle_key()
     _log_auth_event("login", "success", request, user=user)
     # Ensure a CSRF token is available for subsequent POSTs
     get_token(request)
@@ -204,8 +224,12 @@ def password_change_view(request: Request) -> Response:
         _log_auth_event("password_change", "password_validation_failed", request, user=user)
         return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
 
+    current_session_key = request.session.session_key
     user.set_password(new_password)
-    user.save()
+    user.save(update_fields=["password"])
+    _delete_other_sessions(user.id, current_session_key)
+    update_session_auth_hash(request, user)
+    request.session.cycle_key()
     _log_auth_event("password_change", "success", request, user=user)
 
     return Response(
