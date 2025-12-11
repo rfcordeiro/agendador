@@ -8,7 +8,7 @@ PIP=$(PYTHON) -m pip
 RUFF=$(VENV)/bin/ruff
 MYPY=$(VENV)/bin/mypy
 
-.PHONY: help venv backend-install backend-install-dev backend-run backend-test backend-migrate backend-superuser backend-lint backend-format backend-typecheck frontend-install frontend-dev frontend-lint frontend-format frontend-typecheck compose-up compose-down compose-reset compose-migrate compose-superuser
+.PHONY: help venv backend-install backend-install-dev backend-run backend-test backend-migrate backend-superuser backend-lint backend-format backend-typecheck frontend-install frontend-dev frontend-lint frontend-format frontend-typecheck compose-up compose-down compose-reset compose-migrate compose-makemigrations compose-superuser
 
 help:
 	@echo "Comandos comuns:"
@@ -29,6 +29,7 @@ help:
 	@echo "  make compose-up           # sobe stack (backend/frontend/db/redis)"
 	@echo "  make compose-down         # derruba stack"
 	@echo "  make compose-reset        # reseta volumes e sobe novamente"
+	@echo "  make compose-makemigrations # cria migrations dentro do container backend"
 	@echo "  make compose-migrate      # migrations dentro do container backend"
 	@echo "  make compose-superuser    # superusuario dentro do container backend"
 
@@ -86,6 +87,9 @@ compose-down:
 
 compose-reset:
 	docker compose down -v --remove-orphans && docker compose up -d --build
+
+compose-makemigrations:
+	docker compose exec backend python manage.py makemigrations
 
 compose-migrate:
 	docker compose exec backend python manage.py migrate

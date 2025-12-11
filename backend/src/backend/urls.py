@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.http import HttpRequest, JsonResponse
-from django.urls import path
+from django.urls import include, path
 
 from . import auth_views
 
@@ -32,4 +32,5 @@ urlpatterns = [
         auth_views.email_change_view,
         name="email_change",
     ),
+    path("api/cadastros/", include("cadastros.urls")),
 ]
