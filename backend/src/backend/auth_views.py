@@ -18,12 +18,21 @@ from rest_framework.response import Response
 
 
 def _serialize_user(user: User) -> dict[str, Any]:
-    """Return a minimal user payload for the frontend."""
-    role = "admin" if user.is_staff or user.is_superuser else "operador"
+    """Return a user payload including permissions/roles for the frontend."""
+    roles = list(user.groups.values_list("name", flat=True))
+    permissions = sorted(set(user.get_all_permissions()))
+    base_role = "admin" if user.is_staff or user.is_superuser else "operador"
+    primary_role = roles[0] if roles else base_role
     return {
+        "id": user.id,
+        "username": user.username,
         "name": user.get_full_name() or user.username,
         "email": user.email,
-        "role": role,
+        "role": primary_role,
+        "roles": roles or [primary_role],
+        "permissions": permissions,
+        "is_staff": user.is_staff,
+        "is_superuser": user.is_superuser,
     }
 
 

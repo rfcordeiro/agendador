@@ -2,10 +2,23 @@ import { FormEvent, useEffect, useMemo, useState } from 'react';
 import './index.css';
 
 interface User {
+  id: number;
+  username: string;
   name: string;
   email: string;
   role: string;
+  roles: string[];
+  permissions: string[];
+  isStaff: boolean;
+  isSuperuser: boolean;
 }
+
+type UserPayload = Partial<User> & {
+  is_staff?: boolean;
+  is_superuser?: boolean;
+  roles?: unknown;
+  permissions?: unknown;
+};
 
 interface AuthState {
   token: string;
@@ -27,6 +40,20 @@ interface ChangePasswordInput {
 }
 
 type Page = 'dashboard' | 'account';
+type QuickActionTone = 'primary' | 'secondary' | 'ghost';
+
+interface QuickAction {
+  label: string;
+  tone: QuickActionTone;
+  permission?: string | string[];
+}
+
+interface PermissionWidgetProps {
+  roles: string[];
+  permissions: string[];
+  isStaff: boolean;
+  isSuperuser: boolean;
+}
 
 function readCsrfToken(): string | null {
   const match = document.cookie
@@ -47,6 +74,44 @@ async function ensureCsrf(): Promise<string> {
   return token;
 }
 
+function toStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((item): item is string => typeof item === 'string');
+}
+
+function normalizeUser(userPayload: UserPayload | undefined, fallbackUsername: string): User {
+  const roles = toStringArray(userPayload?.roles);
+  const permissions = toStringArray(userPayload?.permissions);
+  const isStaff = Boolean(userPayload?.isStaff ?? userPayload?.is_staff);
+  const isSuperuser = Boolean(userPayload?.isSuperuser ?? userPayload?.is_superuser);
+  const rawUsername =
+    typeof userPayload?.username === 'string' && userPayload.username.trim()
+      ? userPayload.username
+      : fallbackUsername;
+  const username = rawUsername || 'usuario';
+  const baseRole = isStaff || isSuperuser ? 'admin' : 'operador';
+  const primaryRole = userPayload?.role ?? roles[0] ?? baseRole;
+
+  return {
+    id: typeof userPayload?.id === 'number' ? userPayload.id : 0,
+    username,
+    name: userPayload?.name ?? username,
+    email: userPayload?.email ?? '',
+    role: primaryRole,
+    roles: roles.length ? roles : [primaryRole],
+    permissions,
+    isStaff,
+    isSuperuser,
+  };
+}
+
+function hasPermission(user: User, required?: string | string[]): boolean {
+  if (!required) return true;
+  const permissionSet = new Set(user.permissions);
+  if (typeof required === 'string') return permissionSet.has(required);
+  return required.some((permission) => permissionSet.has(permission));
+}
+
 async function fetchMe(): Promise<User> {
   const response = await fetch('/api/auth/me', { credentials: 'include' });
 
@@ -55,16 +120,12 @@ async function fetchMe(): Promise<User> {
   }
 
   const data = (await response.json().catch(() => ({}))) as Record<string, unknown>;
-  const userPayload = data.user as Partial<User> | undefined;
+  const userPayload = data.user as UserPayload | undefined;
   if (!userPayload) {
     throw new Error('Resposta do servidor sem usuário.');
   }
 
-  return {
-    name: userPayload.name ?? 'Usuário',
-    email: userPayload.email ?? '',
-    role: userPayload.role ?? 'operador',
-  };
+  return normalizeUser(userPayload, 'Usuário');
 }
 
 const navItems = [
@@ -91,15 +152,107 @@ const metricsCards = [
 
 const highlights = [
   'Login vinculado ao usuário do sistema.',
+  '/auth/me retorna role e permissões para o layout.',
   'Troca de senha em Minha conta (placeholder).',
   'Permissões e publicação ficam disponíveis após autenticação.',
 ];
 
-const quickActions = [
-  { label: 'Criar escala', tone: 'primary' },
-  { label: 'Importar calendário', tone: 'secondary' },
+const quickActions: QuickAction[] = [
+  {
+    label: 'Criar escala',
+    tone: 'primary',
+    permission: ['schedules.add_schedule', 'escala.add_escala'],
+  },
+  { label: 'Importar calendário', tone: 'secondary', permission: 'integrations.import_calendar' },
   { label: 'Ver inconsistências', tone: 'ghost' },
 ];
+
+function PermissionsWidget({
+  roles,
+  permissions,
+  isStaff,
+  isSuperuser,
+}: PermissionWidgetProps) {
+  const [query, setQuery] = useState('');
+  const normalizedRoles = roles.length ? roles : ['operador'];
+  const normalizedPermissions = useMemo(
+    () => Array.from(new Set(permissions)).sort((a, b) => a.localeCompare(b)),
+    [permissions],
+  );
+  const filteredPermissions = useMemo(() => {
+    const term = query.trim().toLowerCase();
+    if (!term) return normalizedPermissions;
+    return normalizedPermissions.filter((permission) => permission.toLowerCase().includes(term));
+  }, [normalizedPermissions, query]);
+
+  const badges = [
+    isSuperuser ? 'Superusuário' : null,
+    isStaff && !isSuperuser ? 'Staff' : null,
+  ].filter(Boolean) as string[];
+
+  const resultsLabel = `Exibindo ${filteredPermissions.length} de ${normalizedPermissions.length} permissões`;
+
+  return (
+    <div className="permissions-widget" aria-label="Roles e permissões da sessão">
+      <div className="permission-header">
+        <div>
+          <p className="eyebrow">Roles e permissões</p>
+          <h3>Explorador de acesso</h3>
+          <p className="muted">Pesquise e valide o que o usuário pode fazer na interface.</p>
+        </div>
+        <div className="permission-counts">
+          <span className="pill pill-soft">{normalizedRoles.length} roles</span>
+          <span className="pill">{normalizedPermissions.length} permissões</span>
+        </div>
+      </div>
+
+      <div className="permission-meta">
+        <div className="chip-row">
+          {normalizedRoles.map((roleItem) => (
+            <span key={roleItem} className="pill pill-soft">
+              {roleItem}
+            </span>
+          ))}
+          {badges.map((badge) => (
+            <span key={badge} className="pill">
+              {badge}
+            </span>
+          ))}
+        </div>
+        <div className="permission-search">
+          <label className="field-label" htmlFor="permission-search">
+            <span>Pesquisar permissão</span>
+            <small className="muted">{resultsLabel}</small>
+          </label>
+          <div className="search-input">
+            <span aria-hidden>🔎</span>
+            <input
+              id="permission-search"
+              type="search"
+              placeholder="Ex.: schedules.add_schedule"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+            />
+          </div>
+        </div>
+      </div>
+
+      {filteredPermissions.length ? (
+        <div className="permission-list" role="list">
+          {filteredPermissions.map((permission) => (
+            <span key={permission} className="permission-item" role="listitem">
+              {permission}
+            </span>
+          ))}
+        </div>
+      ) : (
+        <p className="muted permission-empty">
+          {query ? 'Nenhuma permissão encontrada para este filtro.' : 'Nenhuma permissão informada.'}
+        </p>
+      )}
+    </div>
+  );
+}
 
 const passwordRules = [
   'Mínimo de 8 caracteres.',
@@ -121,15 +274,8 @@ async function authenticate(credentials: Credentials): Promise<AuthState> {
   }
 
   const data = (await response.json().catch(() => ({}))) as Record<string, unknown>;
-  const userPayload = data.user as Partial<User> | undefined;
-  const name =
-    userPayload?.name ?? (typeof data.username === 'string' ? data.username : credentials.username);
-
-  const user: User = {
-    name,
-    email: userPayload?.email ?? '',
-    role: userPayload?.role ?? 'operador',
-  };
+  const userPayload = data.user as UserPayload | undefined;
+  const user = normalizeUser(userPayload, credentials.username);
 
   return { token: 'session', user };
 }
@@ -285,6 +431,14 @@ function Dashboard({
   const [passwordLoading, setPasswordLoading] = useState(false);
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
+  const gatedActions = useMemo(
+    () =>
+      quickActions.map((action) => ({
+        ...action,
+        allowed: hasPermission(user, action.permission) || user.isSuperuser || user.isStaff,
+      })),
+    [user],
+  );
 
   const handlePasswordSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -357,12 +511,26 @@ function Dashboard({
                 </p>
               </div>
               <div className="topbar-actions">
-                {quickActions.map((action) => (
-                  <button key={action.label} className={`pill action-${action.tone}`}>
+                {gatedActions.map((action) => (
+                  <button
+                    key={action.label}
+                    className={`pill action-${action.tone}`}
+                    disabled={!action.allowed}
+                    aria-disabled={!action.allowed}
+                    title={
+                      action.allowed
+                        ? undefined
+                        : 'Bloqueado para este usuário (controle via permissão/role).'
+                    }
+                  >
                     {action.label}
+                    {!action.allowed ? ' · Bloqueado' : ''}
                   </button>
                 ))}
               </div>
+              <p className="muted">
+                Ações ficam liberadas conforme permissões retornadas pelo backend (/auth/me).
+              </p>
             </header>
 
             <section className="cards-grid">
@@ -417,6 +585,14 @@ function Dashboard({
 
                 <dl className="account-details">
                   <div>
+                    <dt>ID</dt>
+                    <dd>{user.id}</dd>
+                  </div>
+                  <div>
+                    <dt>Usuário</dt>
+                    <dd>{user.username}</dd>
+                  </div>
+                  <div>
                     <dt>Nome completo</dt>
                     <dd>{user.name}</dd>
                   </div>
@@ -428,8 +604,21 @@ function Dashboard({
                     <dt>Perfil de acesso</dt>
                     <dd>{user.role}</dd>
                   </div>
+                  <div>
+                    <dt>Privilégios</dt>
+                    <dd>
+                      {user.isSuperuser ? 'Superusuário' : user.isStaff ? 'Staff' : 'Padrão'}
+                    </dd>
+                  </div>
                 </dl>
               </div>
+
+              <PermissionsWidget
+                roles={user.roles}
+                permissions={user.permissions}
+                isStaff={user.isStaff}
+                isSuperuser={user.isSuperuser}
+              />
             </section>
 
             <section className="panel">
