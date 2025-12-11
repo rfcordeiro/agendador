@@ -563,6 +563,7 @@ function PasswordResetConfirmScreen({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [redirecting, setRedirecting] = useState(false);
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -580,8 +581,10 @@ function PasswordResetConfirmScreen({
         newPassword,
       });
       setSuccess(detail);
-      setNewPassword('');
-      setConfirmPassword('');
+      setRedirecting(true);
+      setTimeout(() => {
+        onBack();
+      }, 1200);
     } catch (exception) {
       const message =
         exception instanceof Error ? exception.message : 'Não foi possível redefinir a senha.';
@@ -628,6 +631,7 @@ function PasswordResetConfirmScreen({
 
           {error ? <div className="alert">{error}</div> : null}
           {success ? <div className="success">{success}</div> : null}
+          {redirecting ? <p className="muted">Redirecionando para o login...</p> : null}
 
           <div className="form-actions">
             <button type="submit" className="primary-button" disabled={loading}>
