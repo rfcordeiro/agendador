@@ -144,19 +144,32 @@ def login_view(request: Request) -> Response:
         except json.JSONDecodeError:
             return Response({"detail": "JSON inválido."}, status=status.HTTP_400_BAD_REQUEST)
 
-    username = (payload.get("username") or payload.get("email") or "").strip()
+    username_or_email = (payload.get("username") or payload.get("email") or "").strip()
     password = (payload.get("password") or "").strip()
 
-    if not username or not password:
-        _log_auth_event("login", "missing_credentials", request, username=username)
+    if not username_or_email or not password:
+        _log_auth_event("login", "missing_credentials", request, username=username_or_email)
         return Response(
             {"detail": "Usuário e senha são obrigatórios."},
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-    user = authenticate(request, username=username, password=password)
+    user: User | None = None
+    if User.objects.filter(username=username_or_email).exists():
+        auth_user = authenticate(request, username=username_or_email, password=password)
+        if isinstance(auth_user, User):
+            user = auth_user
+    else:
+        email_user: User | None = (
+            User.objects.filter(email__iexact=username_or_email).only("username").first()
+        )
+        if email_user:
+            auth_user = authenticate(request, username=email_user.username, password=password)
+            if isinstance(auth_user, User):
+                user = auth_user
+
     if user is None or not isinstance(user, User):
-        _log_auth_event("login", "invalid_credentials", request, username=username)
+        _log_auth_event("login", "invalid_credentials", request, username=username_or_email)
         return Response({"detail": "Credenciais inválidas."}, status=status.HTTP_401_UNAUTHORIZED)
 
     login(request, user)
