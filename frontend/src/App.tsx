@@ -266,11 +266,14 @@ async function authenticate(credentials: Credentials): Promise<AuthState> {
     body: JSON.stringify(credentials),
   });
 
-  if (!response.ok) {
-    throw new Error('Usuário ou senha inválidos ou serviço indisponível.');
-  }
-
   const data = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+  if (!response.ok) {
+    const detail = typeof data.detail === 'string' ? data.detail : null;
+    if (response.status === 429) {
+      throw new Error(detail ?? 'Muitas tentativas de login. Aguarde um minuto e tente novamente.');
+    }
+    throw new Error(detail ?? 'Usuário ou senha inválidos ou serviço indisponível.');
+  }
   const userPayload = data.user as UserPayload | undefined;
   const user = normalizeUser(userPayload, credentials.username);
 
