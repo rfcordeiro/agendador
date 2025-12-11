@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&family=Manrope:wght@500;600&display=swap");
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&family=Manrope:wght@500;600&display=swap');
 
 :root {
   --color-primary: #1f6feb;
@@ -11,8 +11,14 @@
   --color-shadow: 0 14px 40px rgba(15, 23, 42, 0.12);
   --radius-card: 16px;
   --radius-pill: 999px;
-  font-family: "Space Grotesk", "Manrope", system-ui, -apple-system, BlinkMacSystemFont,
-    "Segoe UI", sans-serif;
+  font-family:
+    'Space Grotesk',
+    'Manrope',
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    sans-serif;
   color: var(--color-ink);
   background-color: var(--color-surface);
 }
@@ -23,7 +29,8 @@
 
 body {
   margin: 0;
-  background: radial-gradient(circle at 12% 20%, rgba(31, 111, 235, 0.08), transparent 35%),
+  background:
+    radial-gradient(circle at 12% 20%, rgba(31, 111, 235, 0.08), transparent 35%),
     radial-gradient(circle at 82% 8%, rgba(249, 115, 22, 0.08), transparent 30%),
     var(--color-surface);
   min-height: 100vh;
@@ -104,7 +111,10 @@ p {
   font-size: 15px;
   cursor: pointer;
   box-shadow: 0 10px 24px rgba(31, 111, 235, 0.25);
-  transition: transform 120ms ease, box-shadow 120ms ease, opacity 120ms ease;
+  transition:
+    transform 120ms ease,
+    box-shadow 120ms ease,
+    opacity 120ms ease;
 }
 
 .primary-button:disabled {
@@ -175,7 +185,9 @@ p {
   font-size: 15px;
   background: #ffffff;
   outline: none;
-  transition: border-color 100ms ease, box-shadow 100ms ease;
+  transition:
+    border-color 100ms ease,
+    box-shadow 100ms ease;
 }
 
 .field input:focus {
@@ -331,12 +343,12 @@ p {
   box-shadow: 0 10px 26px rgba(15, 23, 42, 0.08);
 }
 
-.card[data-tone="warn"] {
+.card[data-tone='warn'] {
   border-color: rgba(249, 115, 22, 0.3);
   background: linear-gradient(180deg, rgba(249, 115, 22, 0.08), #ffffff);
 }
 
-.card[data-tone="info"] {
+.card[data-tone='info'] {
   border-color: rgba(31, 111, 235, 0.22);
 }
 
@@ -479,7 +491,10 @@ p {
   color: var(--color-ink);
   font-weight: 800;
   cursor: pointer;
-  transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease;
+  transition:
+    transform 120ms ease,
+    box-shadow 120ms ease,
+    border-color 120ms ease;
 }
 
 .info-button:hover {
@@ -505,7 +520,9 @@ p {
   opacity: 0;
   pointer-events: none;
   transform: translateY(-6px);
-  transition: opacity 120ms ease, transform 120ms ease;
+  transition:
+    opacity 120ms ease,
+    transform 120ms ease;
   z-index: 1;
 }
 

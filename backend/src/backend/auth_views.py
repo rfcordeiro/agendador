@@ -54,7 +54,7 @@ def login_view(request: Request) -> Response:
         return Response(
             {"detail": "Usuário e senha são obrigatórios."},
             status=status.HTTP_400_BAD_REQUEST,
-    )
+        )
 
     user = authenticate(request, username=username, password=password)
     if user is None or not isinstance(user, User):

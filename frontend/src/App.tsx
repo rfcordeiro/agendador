@@ -1,5 +1,5 @@
-import { FormEvent, useEffect, useMemo, useState } from "react";
-import "./index.css";
+import { FormEvent, useEffect, useMemo, useState } from 'react';
+import './index.css';
 
 interface User {
   name: string;
@@ -26,130 +26,130 @@ interface ChangePasswordInput {
   newPassword: string;
 }
 
-type Page = "dashboard" | "account";
+type Page = 'dashboard' | 'account';
 
 function readCsrfToken(): string | null {
   const match = document.cookie
-    .split(";")
+    .split(';')
     .map((part) => part.trim())
-    .find((part) => part.startsWith("csrftoken="));
-  return match ? decodeURIComponent(match.split("=")[1]) : null;
+    .find((part) => part.startsWith('csrftoken='));
+  return match ? decodeURIComponent(match.split('=')[1]) : null;
 }
 
 async function ensureCsrf(): Promise<string> {
   const existing = readCsrfToken();
   if (existing) return existing;
-  await fetch("/api/auth/csrf/", { credentials: "include" });
+  await fetch('/api/auth/csrf/', { credentials: 'include' });
   const token = readCsrfToken();
   if (!token) {
-    throw new Error("Não foi possível obter o CSRF token.");
+    throw new Error('Não foi possível obter o CSRF token.');
   }
   return token;
 }
 
 async function fetchMe(): Promise<User> {
-  const response = await fetch("/api/auth/me", { credentials: "include" });
+  const response = await fetch('/api/auth/me', { credentials: 'include' });
 
   if (!response.ok) {
-    throw new Error("Sessão expirada. Faça login novamente.");
+    throw new Error('Sessão expirada. Faça login novamente.');
   }
 
   const data = (await response.json().catch(() => ({}))) as Record<string, unknown>;
   const userPayload = data.user as Partial<User> | undefined;
   if (!userPayload) {
-    throw new Error("Resposta do servidor sem usuário.");
+    throw new Error('Resposta do servidor sem usuário.');
   }
 
   return {
-    name: userPayload.name ?? "Usuário",
-    email: userPayload.email ?? "",
-    role: userPayload.role ?? "operador",
+    name: userPayload.name ?? 'Usuário',
+    email: userPayload.email ?? '',
+    role: userPayload.role ?? 'operador',
   };
 }
 
 const navItems = [
-  { label: "Dashboard", icon: "📊", page: "dashboard" as Page },
-  { label: "Profissionais", icon: "👥" },
-  { label: "Locais", icon: "🏥" },
-  { label: "Escalas", icon: "📅" },
-  { label: "Publicação", icon: "☁️" },
-  { label: "Auditoria", icon: "📝" },
-  { label: "Minha conta", icon: "👤", page: "account" as Page },
+  { label: 'Dashboard', icon: '📊', page: 'dashboard' as Page },
+  { label: 'Profissionais', icon: '👥' },
+  { label: 'Locais', icon: '🏥' },
+  { label: 'Escalas', icon: '📅' },
+  { label: 'Publicação', icon: '☁️' },
+  { label: 'Auditoria', icon: '📝' },
+  { label: 'Minha conta', icon: '👤', page: 'account' as Page },
 ];
 
 const metricsCards = [
-  { title: "Próximas escalas", value: "3 semanas", detail: "Geração automática ativa", tone: "ok" },
-  { title: "Pendências", value: "5 itens", detail: "Aprovar e publicar", tone: "warn" },
+  { title: 'Próximas escalas', value: '3 semanas', detail: 'Geração automática ativa', tone: 'ok' },
+  { title: 'Pendências', value: '5 itens', detail: 'Aprovar e publicar', tone: 'warn' },
   {
-    title: "Jobs de sync",
-    value: "2/2",
-    detail: "Google Calendar e Redis ok",
-    tone: "ok",
+    title: 'Jobs de sync',
+    value: '2/2',
+    detail: 'Google Calendar e Redis ok',
+    tone: 'ok',
   },
-  { title: "Ajustes manuais", value: "12", detail: "Revisar Savassi/Lourdes", tone: "info" },
+  { title: 'Ajustes manuais', value: '12', detail: 'Revisar Savassi/Lourdes', tone: 'info' },
 ];
 
 const highlights = [
-  "Login vinculado ao usuário do sistema.",
-  "Troca de senha em Minha conta (placeholder).",
-  "Permissões e publicação ficam disponíveis após autenticação.",
+  'Login vinculado ao usuário do sistema.',
+  'Troca de senha em Minha conta (placeholder).',
+  'Permissões e publicação ficam disponíveis após autenticação.',
 ];
 
 const quickActions = [
-  { label: "Criar escala", tone: "primary" },
-  { label: "Importar calendário", tone: "secondary" },
-  { label: "Ver inconsistências", tone: "ghost" },
+  { label: 'Criar escala', tone: 'primary' },
+  { label: 'Importar calendário', tone: 'secondary' },
+  { label: 'Ver inconsistências', tone: 'ghost' },
 ];
 
 const passwordRules = [
-  "Mínimo de 8 caracteres.",
-  "Use pelo menos uma letra maiúscula e uma minúscula.",
-  "Inclua número ou símbolo para reforçar a segurança.",
+  'Mínimo de 8 caracteres.',
+  'Use pelo menos uma letra maiúscula e uma minúscula.',
+  'Inclua número ou símbolo para reforçar a segurança.',
 ];
 
 async function authenticate(credentials: Credentials): Promise<AuthState> {
   const csrf = await ensureCsrf();
-  const response = await fetch("/api/auth/login", {
-    method: "POST",
-    credentials: "include",
-    headers: { "Content-Type": "application/json", "X-CSRFToken": csrf },
+  const response = await fetch('/api/auth/login', {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
     body: JSON.stringify(credentials),
   });
 
   if (!response.ok) {
-    throw new Error("Usuário ou senha inválidos ou serviço indisponível.");
+    throw new Error('Usuário ou senha inválidos ou serviço indisponível.');
   }
 
   const data = (await response.json().catch(() => ({}))) as Record<string, unknown>;
   const userPayload = data.user as Partial<User> | undefined;
   const name =
-    userPayload?.name ?? (typeof data.username === "string" ? data.username : credentials.username);
+    userPayload?.name ?? (typeof data.username === 'string' ? data.username : credentials.username);
 
   const user: User = {
     name,
-    email: userPayload?.email ?? "",
-    role: userPayload?.role ?? "operador",
+    email: userPayload?.email ?? '',
+    role: userPayload?.role ?? 'operador',
   };
 
-  return { token: "session", user };
+  return { token: 'session', user };
 }
 
 async function changePassword(input: ChangePasswordInput): Promise<void> {
   const csrf = await ensureCsrf();
-  const response = await fetch("/api/auth/password/change", {
-    method: "POST",
-    credentials: "include",
-    headers: { "Content-Type": "application/json", "X-CSRFToken": csrf },
+  const response = await fetch('/api/auth/password/change', {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
     body: JSON.stringify({ old_password: input.oldPassword, new_password: input.newPassword }),
   });
 
   if (!response.ok) {
     const data = (await response.json().catch(() => ({}))) as Record<string, unknown>;
-    const detail = typeof data.detail === "string" ? data.detail : null;
+    const detail = typeof data.detail === 'string' ? data.detail : null;
     if (response.status === 403) {
-      throw new Error(detail ?? "Sessão expirada ou CSRF inválido. Faça login novamente.");
+      throw new Error(detail ?? 'Sessão expirada ou CSRF inválido. Faça login novamente.');
     }
-    throw new Error(detail ?? "Não foi possível trocar a senha.");
+    throw new Error(detail ?? 'Não foi possível trocar a senha.');
   }
 }
 
@@ -178,7 +178,7 @@ function PasswordRulesHint() {
       <div
         id="password-rules"
         role="note"
-        className={`tooltip-card${open ? " visible" : ""}`}
+        className={`tooltip-card${open ? ' visible' : ''}`}
         aria-live="polite"
       >
         <p>Regras recomendadas:</p>
@@ -201,8 +201,8 @@ function LoginScreen({
   loading: boolean;
   error: AuthError | null;
 }) {
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -248,7 +248,7 @@ function LoginScreen({
           {error ? <div className="alert">{error.message}</div> : null}
 
           <button type="submit" className="primary-button" disabled={loading}>
-            {loading ? "Autenticando..." : "Entrar"}
+            {loading ? 'Autenticando...' : 'Entrar'}
           </button>
         </form>
       </div>
@@ -271,17 +271,17 @@ function Dashboard({
 }) {
   const greeting = useMemo(() => {
     const hour = new Date().getHours();
-    if (hour < 12) return "Bom dia";
-    if (hour < 18) return "Boa tarde";
-    return "Boa noite";
+    if (hour < 12) return 'Bom dia';
+    if (hour < 18) return 'Boa tarde';
+    return 'Boa noite';
   }, []);
   const userInitial = useMemo(() => {
-    const source = user.name || user.email || "Usuário";
+    const source = user.name || user.email || 'Usuário';
     return source.charAt(0).toUpperCase();
   }, [user.email, user.name]);
-  const [oldPassword, setOldPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+  const [oldPassword, setOldPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordLoading, setPasswordLoading] = useState(false);
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
@@ -291,19 +291,18 @@ function Dashboard({
     setPasswordError(null);
     setPasswordSuccess(null);
     if (newPassword !== confirmPassword) {
-      setPasswordError("As senhas não conferem.");
+      setPasswordError('As senhas não conferem.');
       return;
     }
     setPasswordLoading(true);
     try {
       await onPasswordChange({ oldPassword, newPassword });
-      setPasswordSuccess("Senha atualizada com sucesso.");
-      setOldPassword("");
-      setNewPassword("");
-      setConfirmPassword("");
+      setPasswordSuccess('Senha atualizada com sucesso.');
+      setOldPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
     } catch (exception) {
-      const message =
-        exception instanceof Error ? exception.message : "Erro ao trocar a senha.";
+      const message = exception instanceof Error ? exception.message : 'Erro ao trocar a senha.';
       setPasswordError(message);
     } finally {
       setPasswordLoading(false);
@@ -324,7 +323,7 @@ function Dashboard({
           {navItems.map((item) => (
             <button
               key={item.label}
-              className={`nav-item${item.page === page ? " active" : ""}`}
+              className={`nav-item${item.page === page ? ' active' : ''}`}
               onClick={() => (item.page ? onNavigate(item.page) : undefined)}
             >
               <span aria-hidden>{item.icon}</span>
@@ -344,7 +343,7 @@ function Dashboard({
       </aside>
 
       <main className="main">
-        {page === "dashboard" ? (
+        {page === 'dashboard' ? (
           <>
             <header className="topbar">
               <div>
@@ -408,7 +407,7 @@ function Dashboard({
                   <div className="profile-text">
                     <p className="eyebrow">Usuário</p>
                     <h3>{user.name}</h3>
-                    <p className="muted">{user.email || "Email não informado"}</p>
+                    <p className="muted">{user.email || 'Email não informado'}</p>
                     <div className="chip-row">
                       <span className="pill pill-soft">Função: {user.role}</span>
                       <span className="pill pill-ghost">Autenticação ativa</span>
@@ -423,7 +422,7 @@ function Dashboard({
                   </div>
                   <div>
                     <dt>Email</dt>
-                    <dd>{user.email || "Não informado"}</dd>
+                    <dd>{user.email || 'Não informado'}</dd>
                   </div>
                   <div>
                     <dt>Perfil de acesso</dt>
@@ -480,7 +479,7 @@ function Dashboard({
                 {passwordSuccess ? <div className="success">{passwordSuccess}</div> : null}
                 <div className="account-actions">
                   <button type="submit" className="primary-button" disabled={passwordLoading}>
-                    {passwordLoading ? "Salvando..." : "Atualizar senha"}
+                    {passwordLoading ? 'Salvando...' : 'Atualizar senha'}
                   </button>
                   <button type="button" className="ghost-button" onClick={onLogout}>
                     Sair da sessão
@@ -498,13 +497,13 @@ function Dashboard({
 export default function App() {
   const [auth, setAuth] = useState<AuthState | null>(null);
   const [booting, setBooting] = useState(true);
-  const [page, setPage] = useState<Page>("dashboard");
+  const [page, setPage] = useState<Page>('dashboard');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<AuthError | null>(null);
 
   useEffect(() => {
     fetchMe()
-      .then((user) => setAuth({ token: "session", user }))
+      .then((user) => setAuth({ token: 'session', user }))
       .catch(() => {
         /* not logged */
       })
@@ -519,7 +518,7 @@ export default function App() {
       setAuth(result);
     } catch (exception) {
       const message =
-        exception instanceof Error ? exception.message : "Não foi possível autenticar.";
+        exception instanceof Error ? exception.message : 'Não foi possível autenticar.';
       setError({ message });
     } finally {
       setLoading(false);
@@ -529,11 +528,11 @@ export default function App() {
   const handleLogout = () => {
     ensureCsrf()
       .then((csrf) =>
-        fetch("/api/auth/logout", {
-          method: "POST",
-          credentials: "include",
-          headers: { "X-CSRFToken": csrf },
-        })
+        fetch('/api/auth/logout', {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'X-CSRFToken': csrf },
+        }),
       )
       .catch(() => {
         /* ignore logout errors */
