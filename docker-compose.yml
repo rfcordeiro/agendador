@@ -29,6 +29,13 @@ services:
       POSTGRES_PORT: 5432
       PYTHONPATH: /app/src
       SECRET_KEY: ${SECRET_KEY:-dev-secret}
+      EMAIL_BACKEND: ${EMAIL_BACKEND:-django.core.mail.backends.console.EmailBackend}
+      EMAIL_HOST: ${EMAIL_HOST:-}
+      EMAIL_PORT: ${EMAIL_PORT:-587}
+      EMAIL_USE_TLS: ${EMAIL_USE_TLS:-True}
+      EMAIL_HOST_USER: ${EMAIL_HOST_USER:-}
+      EMAIL_HOST_PASSWORD: ${EMAIL_HOST_PASSWORD:-}
+      DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL:-nao-responder@example.com}
     ports:
       - "8000:8000"
     depends_on:
