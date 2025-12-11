@@ -167,12 +167,7 @@ const quickActions: QuickAction[] = [
   { label: 'Ver inconsistências', tone: 'ghost' },
 ];
 
-function PermissionsWidget({
-  roles,
-  permissions,
-  isStaff,
-  isSuperuser,
-}: PermissionWidgetProps) {
+function PermissionsWidget({ roles, permissions, isStaff, isSuperuser }: PermissionWidgetProps) {
   const [query, setQuery] = useState('');
   const normalizedRoles = roles.length ? roles : ['operador'];
   const normalizedPermissions = useMemo(
@@ -247,7 +242,9 @@ function PermissionsWidget({
         </div>
       ) : (
         <p className="muted permission-empty">
-          {query ? 'Nenhuma permissão encontrada para este filtro.' : 'Nenhuma permissão informada.'}
+          {query
+            ? 'Nenhuma permissão encontrada para este filtro.'
+            : 'Nenhuma permissão informada.'}
         </p>
       )}
     </div>
@@ -606,9 +603,7 @@ function Dashboard({
                   </div>
                   <div>
                     <dt>Privilégios</dt>
-                    <dd>
-                      {user.isSuperuser ? 'Superusuário' : user.isStaff ? 'Staff' : 'Padrão'}
-                    </dd>
+                    <dd>{user.isSuperuser ? 'Superusuário' : user.isStaff ? 'Staff' : 'Padrão'}</dd>
                   </div>
                 </dl>
               </div>
