@@ -119,6 +119,7 @@ REST_FRAMEWORK = {
         "user": "1000/day",
         "login": "5/min",
     },
+    "EXCEPTION_HANDLER": "backend.exception_handlers.custom_exception_handler",
 }
 
 CSRF_TRUSTED_ORIGINS = [

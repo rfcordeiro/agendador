@@ -12,7 +12,6 @@ from django.middleware.csrf import get_token
 from django.views.decorators.csrf import ensure_csrf_cookie
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes, throttle_classes
-from rest_framework.exceptions import Throttled
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -29,12 +28,6 @@ class LoginRateThrottle(SimpleRateThrottle):
         if not ident:
             return None
         return self.cache_format % {"scope": self.scope, "ident": ident}
-
-    def throttled(self, request: Request, wait: float | None) -> None:
-        seconds = int(wait or 0)
-        human_wait = f"{seconds} segundos" if seconds else "alguns instantes"
-        detail = f"Limite de tentativas excedido. Tente novamente em {human_wait}."
-        raise Throttled(wait=wait, detail=detail)
 
 
 def _serialize_user(user: User) -> dict[str, Any]:
