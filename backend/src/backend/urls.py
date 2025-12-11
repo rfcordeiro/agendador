@@ -22,4 +22,9 @@ urlpatterns = [
         auth_views.password_reset_request_view,
         name="password_reset_request",
     ),
+    path(
+        "api/auth/email/change",
+        auth_views.email_change_view,
+        name="email_change",
+    ),
 ]

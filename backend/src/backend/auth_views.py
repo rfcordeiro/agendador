@@ -10,7 +10,9 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
+from django.core.exceptions import ValidationError
 from django.core.mail import send_mail
+from django.core.validators import validate_email
 from django.http import HttpRequest
 from django.middleware.csrf import get_token
 from django.utils.encoding import force_bytes
@@ -217,5 +219,53 @@ def password_reset_request_view(request: Request) -> Response:
     # Resposta genérica para evitar exposição de usuários
     return Response(
         {"detail": "Se o email existir, enviaremos instruções para redefinir a senha."},
+        status=status.HTTP_200_OK,
+    )
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def email_change_view(request: Request) -> Response:
+    payload: Mapping[str, Any]
+    if isinstance(request.data, Mapping):
+        payload = request.data
+    else:
+        try:
+            payload = json.loads(request.body or "{}")
+        except json.JSONDecodeError:
+            return Response({"detail": "JSON inválido."}, status=status.HTTP_400_BAD_REQUEST)
+
+    new_email = (payload.get("email") or "").strip().lower()
+    if not new_email:
+        return Response({"detail": "Email é obrigatório."}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        validate_email(new_email)
+    except ValidationError:
+        return Response({"detail": "Email inválido."}, status=status.HTTP_400_BAD_REQUEST)
+
+    user = request.user
+    if not isinstance(user, User):
+        return Response({"detail": "Sessão inválida."}, status=status.HTTP_401_UNAUTHORIZED)
+
+    if User.objects.filter(email__iexact=new_email).exclude(pk=user.pk).exists():
+        return Response(
+            {"detail": "Email já está em uso por outro usuário."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if user.email.lower() == new_email:
+        return Response(
+            {"detail": "O email informado já está cadastrado."}, status=status.HTTP_400_BAD_REQUEST
+        )
+
+    user.email = new_email
+    user.save(update_fields=["email"])
+
+    return Response(
+        {
+            "detail": "Email atualizado com sucesso.",
+            "user": _serialize_user(user),
+        },
         status=status.HTTP_200_OK,
     )

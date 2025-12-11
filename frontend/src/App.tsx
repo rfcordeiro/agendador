@@ -39,6 +39,10 @@ interface ChangePasswordInput {
   newPassword: string;
 }
 
+interface ChangeEmailInput {
+  email: string;
+}
+
 type AuthScreen = 'login' | 'reset';
 type Page = 'dashboard' | 'account';
 type QuickActionTone = 'primary' | 'secondary' | 'ghost';
@@ -319,6 +323,29 @@ async function changePassword(input: ChangePasswordInput): Promise<void> {
   }
 }
 
+async function changeEmail(input: ChangeEmailInput): Promise<User> {
+  const csrf = await ensureCsrf();
+  const response = await fetch('/api/auth/email/change', {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+    body: JSON.stringify({ email: input.email }),
+  });
+
+  const data = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+  const detail = typeof data.detail === 'string' ? data.detail : null;
+  const userPayload = data.user as UserPayload | undefined;
+
+  if (!response.ok) {
+    throw new Error(detail ?? 'Não foi possível atualizar o email.');
+  }
+  if (!userPayload) {
+    throw new Error('Resposta do servidor sem usuário.');
+  }
+
+  return normalizeUser(userPayload, input.email);
+}
+
 function PasswordRulesHint() {
   const [open, setOpen] = useState(false);
 
@@ -504,12 +531,14 @@ function Dashboard({
   user,
   onLogout,
   onPasswordChange,
+  onEmailChange,
   page,
   onNavigate,
 }: {
   user: User;
   onLogout: () => void;
   onPasswordChange: (input: ChangePasswordInput) => Promise<void>;
+  onEmailChange: (input: ChangeEmailInput) => Promise<User>;
   page: Page;
   onNavigate: (page: Page) => void;
 }) {
@@ -529,6 +558,13 @@ function Dashboard({
   const [passwordLoading, setPasswordLoading] = useState(false);
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
+  const [emailInput, setEmailInput] = useState(user.email);
+  const [emailLoading, setEmailLoading] = useState(false);
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const [emailSuccess, setEmailSuccess] = useState<string | null>(null);
+  useEffect(() => {
+    setEmailInput(user.email);
+  }, [user.email]);
   const gatedActions = useMemo(
     () =>
       quickActions.map((action) => ({
@@ -558,6 +594,24 @@ function Dashboard({
       setPasswordError(message);
     } finally {
       setPasswordLoading(false);
+    }
+  };
+
+  const handleEmailSubmit = async (event: FormEvent) => {
+    event.preventDefault();
+    setEmailError(null);
+    setEmailSuccess(null);
+    setEmailLoading(true);
+    try {
+      const updatedUser = await onEmailChange({ email: emailInput });
+      setEmailSuccess('Email atualizado com sucesso.');
+      setEmailInput(updatedUser.email);
+    } catch (exception) {
+      const message =
+        exception instanceof Error ? exception.message : 'Não foi possível atualizar o email.';
+      setEmailError(message);
+    } finally {
+      setEmailLoading(false);
     }
   };
 
@@ -720,6 +774,40 @@ function Dashboard({
             <section className="panel">
               <div className="panel-header">
                 <div>
+                  <p className="eyebrow">Contato</p>
+                  <h2>Atualizar email</h2>
+                  <p className="lede">Mantenha seu email de recuperação sempre atualizado.</p>
+                </div>
+                <span className="badge">Identidade</span>
+              </div>
+              <form className="account-form" onSubmit={handleEmailSubmit}>
+                <label className="field">
+                  <span>Novo email</span>
+                  <input
+                    required
+                    type="email"
+                    autoComplete="email"
+                    value={emailInput}
+                    onChange={(event) => setEmailInput(event.target.value)}
+                    placeholder="seu.email@exemplo.com"
+                  />
+                </label>
+                {emailError ? <div className="alert">{emailError}</div> : null}
+                {emailSuccess ? <div className="success">{emailSuccess}</div> : null}
+                <div className="account-actions">
+                  <button type="submit" className="primary-button" disabled={emailLoading}>
+                    {emailLoading ? 'Salvando...' : 'Atualizar email'}
+                  </button>
+                  <p className="muted small-print">
+                    Se alterado, este email será usado para login e recuperação de senha.
+                  </p>
+                </div>
+              </form>
+            </section>
+
+            <section className="panel">
+              <div className="panel-header">
+                <div>
                   <p className="eyebrow">Segurança</p>
                   <h2>Atualizar senha</h2>
                   <p className="lede">Mantenha suas credenciais fortes sem sair da sessão.</p>
@@ -828,6 +916,12 @@ export default function App() {
       });
   };
 
+  const handleEmailChange = async (input: ChangeEmailInput) => {
+    const updatedUser = await changeEmail(input);
+    setAuth((prev) => (prev ? { ...prev, user: updatedUser } : prev));
+    return updatedUser;
+  };
+
   if (booting) {
     return (
       <div className="login-shell">
@@ -857,6 +951,7 @@ export default function App() {
       user={auth.user}
       onLogout={handleLogout}
       onPasswordChange={(input) => changePassword(input)}
+      onEmailChange={handleEmailChange}
       page={page}
       onNavigate={setPage}
     />
