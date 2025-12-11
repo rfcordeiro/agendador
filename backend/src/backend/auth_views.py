@@ -1,14 +1,20 @@
 from __future__ import annotations
 
 import json
+import logging
 from collections.abc import Mapping
 from typing import Any
 
+from django.conf import settings
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
+from django.contrib.auth.tokens import PasswordResetTokenGenerator
+from django.core.mail import send_mail
 from django.http import HttpRequest
 from django.middleware.csrf import get_token
+from django.utils.encoding import force_bytes
+from django.utils.http import urlsafe_base64_encode
 from django.views.decorators.csrf import ensure_csrf_cookie
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes, throttle_classes
@@ -22,6 +28,18 @@ class LoginRateThrottle(SimpleRateThrottle):
     """Limit login attempts per IP to reduce brute-force."""
 
     scope = "login"
+
+    def get_cache_key(self, request: Request, view: Any) -> str | None:
+        ident = self.get_ident(request)
+        if not ident:
+            return None
+        return self.cache_format % {"scope": self.scope, "ident": ident}
+
+
+class PasswordResetRateThrottle(SimpleRateThrottle):
+    """Limit reset requests per IP to avoid abuse."""
+
+    scope = "password_reset"
 
     def get_cache_key(self, request: Request, view: Any) -> str | None:
         ident = self.get_ident(request)
@@ -147,4 +165,57 @@ def password_change_view(request: Request) -> Response:
             "detail": "Senha alterada com sucesso.",
             "user": _serialize_user(user),
         }
+    )
+
+
+logger = logging.getLogger(__name__)
+
+
+@api_view(["POST"])
+@permission_classes([])  # allow anonymous
+@throttle_classes([PasswordResetRateThrottle])
+def password_reset_request_view(request: Request) -> Response:
+    payload: Mapping[str, Any]
+    if isinstance(request.data, Mapping):
+        payload = request.data
+    else:
+        try:
+            payload = json.loads(request.body or "{}")
+        except json.JSONDecodeError:
+            return Response({"detail": "JSON inválido."}, status=status.HTTP_400_BAD_REQUEST)
+
+    email = (payload.get("email") or "").strip()
+    if email:
+        logger.info("Solicitação de reset de senha para email %s (mock, sem envio real)", email)
+    else:
+        logger.info("Solicitação de reset de senha sem email informado (mock)")
+
+    users = list(User.objects.filter(email__iexact=email)) if email else []
+    if users:
+        token_generator = PasswordResetTokenGenerator()
+        for user in users:
+            uid = urlsafe_base64_encode(force_bytes(user.pk))
+            token = token_generator.make_token(user)
+            reset_link = f"{settings.FRONTEND_RESET_URL}?uid={uid}&token={token}"
+            subject = "Recuperação de senha - Agendador"
+            message = (
+                "Recebemos um pedido para redefinir sua senha.\n"
+                f"Clique no link ou copie e cole no navegador:\n{reset_link}\n\n"
+                "Se você não solicitou, ignore este email."
+            )
+            send_mail(
+                subject=subject,
+                message=message,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[user.email],
+                fail_silently=True,
+            )
+            logger.info("Email de reset enviado (mock SMTP) para %s", user.email)
+    else:
+        logger.info("Solicitação de reset sem correspondência de usuário (email=%s)", email)
+
+    # Resposta genérica para evitar exposição de usuários
+    return Response(
+        {"detail": "Se o email existir, enviaremos instruções para redefinir a senha."},
+        status=status.HTTP_200_OK,
     )

@@ -39,6 +39,7 @@ interface ChangePasswordInput {
   newPassword: string;
 }
 
+type AuthScreen = 'login' | 'reset';
 type Page = 'dashboard' | 'account';
 type QuickActionTone = 'primary' | 'secondary' | 'ghost';
 
@@ -77,6 +78,25 @@ async function ensureCsrf(): Promise<string> {
 function toStringArray(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
   return value.filter((item): item is string => typeof item === 'string');
+}
+
+async function requestPasswordReset(email: string): Promise<string> {
+  const csrf = await ensureCsrf();
+  const response = await fetch('/api/auth/password/reset/', {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+    body: JSON.stringify({ email }),
+  });
+
+  const data = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+  const detail = typeof data.detail === 'string' ? data.detail : null;
+
+  if (!response.ok) {
+    throw new Error(detail ?? 'Não foi possível enviar a solicitação agora.');
+  }
+
+  return detail ?? 'Se o email existir, enviaremos instruções para redefinir a senha.';
 }
 
 function normalizeUser(userPayload: UserPayload | undefined, fallbackUsername: string): User {
@@ -342,10 +362,12 @@ function LoginScreen({
   onLogin,
   loading,
   error,
+  onForgotPassword,
 }: {
   onLogin: (credentials: Credentials) => Promise<void>;
   loading: boolean;
   error: AuthError | null;
+  onForgotPassword: () => void;
 }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -396,6 +418,82 @@ function LoginScreen({
           <button type="submit" className="primary-button" disabled={loading}>
             {loading ? 'Autenticando...' : 'Entrar'}
           </button>
+          <div className="form-footnote">
+            <button type="button" className="link-button" onClick={onForgotPassword}>
+              Esqueci a senha
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function PasswordResetScreen({ onBack }: { onBack: () => void }) {
+  const [email, setEmail] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  const handleSubmit = async (event: FormEvent) => {
+    event.preventDefault();
+    setError(null);
+    setSuccess(null);
+    setLoading(true);
+    try {
+      const detail = await requestPasswordReset(email);
+      setSuccess(detail);
+      setEmail('');
+    } catch (exception) {
+      const message =
+        exception instanceof Error
+          ? exception.message
+          : 'Não foi possível enviar a solicitação agora.';
+      setError(message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="login-shell">
+      <div className="login-card">
+        <div className="login-header">
+          <p className="eyebrow">Agendador · Recuperar acesso</p>
+          <h1>Esqueci a senha</h1>
+          <p className="lede">
+            Informe seu email. Se existir em nossa base, enviaremos instruções para redefinir a
+            senha.
+          </p>
+        </div>
+
+        <form className="login-form" onSubmit={handleSubmit}>
+          <label className="field">
+            <span>Email</span>
+            <input
+              required
+              type="email"
+              autoComplete="email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              placeholder="seu.email@exemplo.com"
+            />
+          </label>
+
+          {error ? <div className="alert">{error}</div> : null}
+          {success ? <div className="success">{success}</div> : null}
+
+          <div className="form-actions">
+            <button type="submit" className="primary-button" disabled={loading}>
+              {loading ? 'Enviando...' : 'Enviar instruções'}
+            </button>
+            <button type="button" className="ghost-button" onClick={onBack}>
+              Voltar ao login
+            </button>
+          </div>
+          <p className="muted small-print">
+            Simulação: o backend registra o pedido no log/console. Ajuste SMTP para envio real.
+          </p>
         </form>
       </div>
     </div>
@@ -687,6 +785,7 @@ export default function App() {
   const [page, setPage] = useState<Page>('dashboard');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<AuthError | null>(null);
+  const [authScreen, setAuthScreen] = useState<AuthScreen>('login');
 
   useEffect(() => {
     fetchMe()
@@ -740,7 +839,17 @@ export default function App() {
   }
 
   if (!auth) {
-    return <LoginScreen onLogin={handleLogin} loading={loading} error={error} />;
+    if (authScreen === 'reset') {
+      return <PasswordResetScreen onBack={() => setAuthScreen('login')} />;
+    }
+    return (
+      <LoginScreen
+        onLogin={handleLogin}
+        loading={loading}
+        error={error}
+        onForgotPassword={() => setAuthScreen('reset')}
+      />
+    );
   }
 
   return (

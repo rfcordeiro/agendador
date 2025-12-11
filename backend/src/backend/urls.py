@@ -17,4 +17,9 @@ urlpatterns = [
     path("api/auth/logout", auth_views.logout_view, name="logout"),
     path("api/auth/me", auth_views.me_view, name="me"),
     path("api/auth/password/change", auth_views.password_change_view, name="password_change"),
+    path(
+        "api/auth/password/reset/",
+        auth_views.password_reset_request_view,
+        name="password_reset_request",
+    ),
 ]

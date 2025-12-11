@@ -118,6 +118,7 @@ REST_FRAMEWORK = {
         "anon": "500/day",
         "user": "1000/day",
         "login": "5/min",
+        "password_reset": "3/hour",
     },
     "EXCEPTION_HANDLER": "backend.exception_handlers.custom_exception_handler",
 }
@@ -143,3 +144,4 @@ EMAIL_USE_TLS = _env_bool("EMAIL_USE_TLS", True)
 EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
 EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
 DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "nao-responder@example.com")
+FRONTEND_RESET_URL = os.environ.get("FRONTEND_RESET_URL", "http://localhost:5173/reset-password")

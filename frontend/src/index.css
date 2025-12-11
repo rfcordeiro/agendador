@@ -213,6 +213,34 @@ p {
   font-weight: 600;
 }
 
+.form-footnote {
+  text-align: center;
+  margin-top: 4px;
+}
+
+.link-button {
+  background: none;
+  border: none;
+  color: var(--color-primary);
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 0;
+}
+
+.form-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.small-print {
+  font-size: 13px;
+  color: var(--color-ink-muted);
+  margin-top: 8px;
+}
+
 .app-shell {
   min-height: 100vh;
   display: grid;
