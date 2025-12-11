@@ -65,12 +65,22 @@ class Profissional(models.Model):
     cpf = models.CharField(
         max_length=14,
         blank=True,
-        validators=[RegexValidator(r"^\d{3}\.?\d{3}\.?\d{3}-?\d{2}$", "CPF deve conter 11 dígitos.")],
+        validators=[
+            RegexValidator(
+                r"^\d{3}\.?\d{3}\.?\d{3}-?\d{2}$",
+                "CPF deve conter 11 dígitos.",
+            )
+        ],
     )
     cnpj = models.CharField(
         max_length=18,
         blank=True,
-        validators=[RegexValidator(r"^\d{2}\.?\d{3}\.?\d{3}/?\d{4}-?\d{2}$", "CNPJ deve conter 14 dígitos.")],
+        validators=[
+            RegexValidator(
+                r"^\d{2}\.?\d{3}\.?\d{3}/?\d{4}-?\d{2}$",
+                "CNPJ deve conter 14 dígitos.",
+            )
+        ],
     )
     celular = models.CharField(
         max_length=20,

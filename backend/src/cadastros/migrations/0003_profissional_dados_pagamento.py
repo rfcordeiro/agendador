@@ -34,7 +34,11 @@ class Migration(migrations.Migration):
             field=models.CharField(
                 blank=True,
                 max_length=20,
-                validators=[django.core.validators.RegexValidator("^\\+55\\d{10,11}$", "Use o formato +55DDxxxxxxxxx.")],
+                validators=[
+                    django.core.validators.RegexValidator(
+                        "^\\+55\\d{10,11}$", "Use o formato +55DDxxxxxxxxx."
+                    )
+                ],
             ),
         ),
         migrations.AddField(
@@ -43,7 +47,12 @@ class Migration(migrations.Migration):
             field=models.CharField(
                 blank=True,
                 max_length=18,
-                validators=[django.core.validators.RegexValidator("^\\d{2}\\.?\\d{3}\\.?\\d{3}/?\\d{4}-?\\d{2}$", "CNPJ deve conter 14 dígitos.")],
+                validators=[
+                    django.core.validators.RegexValidator(
+                        "^\\d{2}\\.?\\d{3}\\.?\\d{3}/?\\d{4}-?\\d{2}$",
+                        "CNPJ deve conter 14 dígitos.",
+                    )
+                ],
             ),
         ),
         migrations.AddField(
@@ -63,7 +72,12 @@ class Migration(migrations.Migration):
             field=models.CharField(
                 blank=True,
                 max_length=14,
-                validators=[django.core.validators.RegexValidator("^\\d{3}\\.?\\d{3}\\.?\\d{3}-?\\d{2}$", "CPF deve conter 11 dígitos.")],
+                validators=[
+                    django.core.validators.RegexValidator(
+                        "^\\d{3}\\.?\\d{3}\\.?\\d{3}-?\\d{2}$",
+                        "CPF deve conter 11 dígitos.",
+                    )
+                ],
             ),
         ),
         migrations.AddField(
