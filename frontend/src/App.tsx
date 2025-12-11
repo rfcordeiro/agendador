@@ -57,7 +57,7 @@ async function fetchMe(): Promise<User> {
   const data = (await response.json().catch(() => ({}))) as Record<string, unknown>;
   const userPayload = data.user as Partial<User> | undefined;
   if (!userPayload) {
-    throw new Error("Resposta do backend sem usuário.");
+    throw new Error("Resposta do servidor sem usuário.");
   }
 
   return {
@@ -90,7 +90,7 @@ const metricsCards = [
 ];
 
 const highlights = [
-  "Login vinculado ao usuário do Django/DRF.",
+  "Login vinculado ao usuário do sistema.",
   "Troca de senha em Minha conta (placeholder).",
   "Permissões e publicação ficam disponíveis após autenticação.",
 ];
@@ -99,6 +99,12 @@ const quickActions = [
   { label: "Criar escala", tone: "primary" },
   { label: "Importar calendário", tone: "secondary" },
   { label: "Ver inconsistências", tone: "ghost" },
+];
+
+const passwordRules = [
+  "Mínimo de 8 caracteres.",
+  "Use pelo menos uma letra maiúscula e uma minúscula.",
+  "Inclua número ou símbolo para reforçar a segurança.",
 ];
 
 async function authenticate(credentials: Credentials): Promise<AuthState> {
@@ -111,7 +117,7 @@ async function authenticate(credentials: Credentials): Promise<AuthState> {
   });
 
   if (!response.ok) {
-    throw new Error("Usuário ou senha inválidos ou backend indisponível.");
+    throw new Error("Usuário ou senha inválidos ou serviço indisponível.");
   }
 
   const data = (await response.json().catch(() => ({}))) as Record<string, unknown>;
@@ -147,6 +153,45 @@ async function changePassword(input: ChangePasswordInput): Promise<void> {
   }
 }
 
+function PasswordRulesHint() {
+  const [open, setOpen] = useState(false);
+
+  const show = () => setOpen(true);
+  const hide = () => setOpen(false);
+  const toggle = () => setOpen((value) => !value);
+
+  return (
+    <div className="tooltip" onMouseLeave={hide}>
+      <button
+        type="button"
+        className="info-button"
+        aria-label="Ver regras de senha"
+        aria-expanded={open}
+        aria-controls="password-rules"
+        onMouseEnter={show}
+        onFocus={show}
+        onBlur={hide}
+        onClick={toggle}
+      >
+        ?
+      </button>
+      <div
+        id="password-rules"
+        role="note"
+        className={`tooltip-card${open ? " visible" : ""}`}
+        aria-live="polite"
+      >
+        <p>Regras recomendadas:</p>
+        <ul>
+          {passwordRules.map((rule) => (
+            <li key={rule}>{rule}</li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  );
+}
+
 function LoginScreen({
   onLogin,
   loading,
@@ -169,10 +214,10 @@ function LoginScreen({
       <div className="login-card">
         <div className="login-header">
           <p className="eyebrow">Agendador · Acesso</p>
-          <h1>Entre com seu usuário do Django</h1>
+          <h1>Entre com suas credenciais</h1>
           <p className="lede">
-            A autenticação usa os endpoints de login do backend. Em produção, tokens ficam em
-            cookie seguro; em dev usamos armazenamento local.
+            A autenticação usa sessão segura. Em produção, tokens ficam em cookie seguro; em dev
+            usamos armazenamento local.
           </p>
         </div>
 
@@ -230,6 +275,10 @@ function Dashboard({
     if (hour < 18) return "Boa tarde";
     return "Boa noite";
   }, []);
+  const userInitial = useMemo(() => {
+    const source = user.name || user.email || "Usuário";
+    return source.charAt(0).toUpperCase();
+  }, [user.email, user.name]);
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -340,54 +389,106 @@ function Dashboard({
             </section>
           </>
         ) : (
-          <section className="panel">
-            <div className="panel-header">
-              <h2>Minha conta</h2>
-              <span className="badge">Troca de senha</span>
-            </div>
-            <form className="account-form" onSubmit={handlePasswordSubmit}>
-              <label className="field">
-                <span>Senha atual</span>
-                <input
-                  required
-                  type="password"
-                  autoComplete="current-password"
-                  value={oldPassword}
-                  onChange={(event) => setOldPassword(event.target.value)}
-                />
-              </label>
-              <label className="field">
-                <span>Nova senha</span>
-                <input
-                  required
-                  type="password"
-                  autoComplete="new-password"
-                  value={newPassword}
-                  onChange={(event) => setNewPassword(event.target.value)}
-                />
-              </label>
-              <label className="field">
-                <span>Confirmar nova senha</span>
-                <input
-                  required
-                  type="password"
-                  autoComplete="new-password"
-                  value={confirmPassword}
-                  onChange={(event) => setConfirmPassword(event.target.value)}
-                />
-              </label>
-              {passwordError ? <div className="alert">{passwordError}</div> : null}
-              {passwordSuccess ? <div className="success">{passwordSuccess}</div> : null}
-              <div className="account-actions">
-                <button type="submit" className="primary-button" disabled={passwordLoading}>
-                  {passwordLoading ? "Salvando..." : "Atualizar senha"}
-                </button>
-                <button type="button" className="ghost-button" onClick={onLogout}>
-                  Sair da sessão
-                </button>
+          <>
+            <section className="panel">
+              <div className="panel-header">
+                <div>
+                  <p className="eyebrow">Minha conta</p>
+                  <h2>Identidade do usuário</h2>
+                  <p className="lede">Dados da sessão atual.</p>
+                </div>
+                <span className="badge">Sessão autenticada</span>
               </div>
-            </form>
-          </section>
+
+              <div className="account-overview">
+                <div className="profile-card">
+                  <div className="avatar" aria-hidden>
+                    {userInitial}
+                  </div>
+                  <div className="profile-text">
+                    <p className="eyebrow">Usuário</p>
+                    <h3>{user.name}</h3>
+                    <p className="muted">{user.email || "Email não informado"}</p>
+                    <div className="chip-row">
+                      <span className="pill pill-soft">Função: {user.role}</span>
+                      <span className="pill pill-ghost">Autenticação ativa</span>
+                    </div>
+                  </div>
+                </div>
+
+                <dl className="account-details">
+                  <div>
+                    <dt>Nome completo</dt>
+                    <dd>{user.name}</dd>
+                  </div>
+                  <div>
+                    <dt>Email</dt>
+                    <dd>{user.email || "Não informado"}</dd>
+                  </div>
+                  <div>
+                    <dt>Perfil de acesso</dt>
+                    <dd>{user.role}</dd>
+                  </div>
+                </dl>
+              </div>
+            </section>
+
+            <section className="panel">
+              <div className="panel-header">
+                <div>
+                  <p className="eyebrow">Segurança</p>
+                  <h2>Atualizar senha</h2>
+                  <p className="lede">Mantenha suas credenciais fortes sem sair da sessão.</p>
+                </div>
+                <span className="badge">Credenciais</span>
+              </div>
+              <form className="account-form" onSubmit={handlePasswordSubmit}>
+                <label className="field">
+                  <span>Senha atual</span>
+                  <input
+                    required
+                    type="password"
+                    autoComplete="current-password"
+                    value={oldPassword}
+                    onChange={(event) => setOldPassword(event.target.value)}
+                  />
+                </label>
+                <label className="field">
+                  <div className="field-label">
+                    <span>Nova senha</span>
+                    <PasswordRulesHint />
+                  </div>
+                  <input
+                    required
+                    type="password"
+                    autoComplete="new-password"
+                    value={newPassword}
+                    onChange={(event) => setNewPassword(event.target.value)}
+                  />
+                </label>
+                <label className="field">
+                  <span>Confirmar nova senha</span>
+                  <input
+                    required
+                    type="password"
+                    autoComplete="new-password"
+                    value={confirmPassword}
+                    onChange={(event) => setConfirmPassword(event.target.value)}
+                  />
+                </label>
+                {passwordError ? <div className="alert">{passwordError}</div> : null}
+                {passwordSuccess ? <div className="success">{passwordSuccess}</div> : null}
+                <div className="account-actions">
+                  <button type="submit" className="primary-button" disabled={passwordLoading}>
+                    {passwordLoading ? "Salvando..." : "Atualizar senha"}
+                  </button>
+                  <button type="button" className="ghost-button" onClick={onLogout}>
+                    Sair da sessão
+                  </button>
+                </div>
+              </form>
+            </section>
+          </>
         )}
       </main>
     </div>

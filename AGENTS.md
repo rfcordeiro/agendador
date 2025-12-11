@@ -31,6 +31,7 @@
 ## Estilo de código (frontend)
 - Preferir TypeScript em novos componentes; manter `strict: true`.
 - Formatação: `prettier` + `eslint` (plugin React/TS). Rodar antes do commit.
+- Em todo desenvolvimento, validar lint/format/tipos com os alvos do Makefile: `make frontend-lint`, `make frontend-format`, `make frontend-typecheck`, `make backend-lint`, `make backend-format`, `make backend-typecheck`.
 - Estrutura: componentes por feature; evite “mega-componentes”. Hooks compartilhados em `src/lib` ou `src/common`. CSS Modules ou styled-system simples; evitar styles globais não necessários.
 - Acessibilidade: sempre a11y nos controles (aria-label, roles). Testes com React Testing Library.
 
