@@ -43,7 +43,12 @@ interface ChangeEmailInput {
   email: string;
 }
 
-type AuthScreen = 'login' | 'reset';
+interface ResetToken {
+  uid: string;
+  token: string;
+}
+
+type AuthScreen = 'login' | 'reset-request' | 'reset-confirm';
 type Page = 'dashboard' | 'account';
 type QuickActionTone = 'primary' | 'secondary' | 'ghost';
 
@@ -101,6 +106,25 @@ async function requestPasswordReset(email: string): Promise<string> {
   }
 
   return detail ?? 'Se o email existir, enviaremos instruções para redefinir a senha.';
+}
+
+async function confirmPasswordReset(input: ResetToken & { newPassword: string }): Promise<string> {
+  const csrf = await ensureCsrf();
+  const response = await fetch('/api/auth/password/reset/confirm', {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+    body: JSON.stringify({ uid: input.uid, token: input.token, new_password: input.newPassword }),
+  });
+
+  const data = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+  const detail = typeof data.detail === 'string' ? data.detail : null;
+
+  if (!response.ok) {
+    throw new Error(detail ?? 'Não foi possível redefinir a senha.');
+  }
+
+  return detail ?? 'Senha redefinida com sucesso.';
 }
 
 function normalizeUser(userPayload: UserPayload | undefined, fallbackUsername: string): User {
@@ -456,7 +480,7 @@ function LoginScreen({
   );
 }
 
-function PasswordResetScreen({ onBack }: { onBack: () => void }) {
+function PasswordResetRequestScreen({ onBack }: { onBack: () => void }) {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -520,6 +544,101 @@ function PasswordResetScreen({ onBack }: { onBack: () => void }) {
           </div>
           <p className="muted small-print">
             Simulação: o backend registra o pedido no log/console. Ajuste SMTP para envio real.
+          </p>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function PasswordResetConfirmScreen({
+  onBack,
+  resetToken,
+}: {
+  onBack: () => void;
+  resetToken: ResetToken;
+}) {
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  const handleSubmit = async (event: FormEvent) => {
+    event.preventDefault();
+    setError(null);
+    setSuccess(null);
+    if (newPassword !== confirmPassword) {
+      setError('As senhas não conferem.');
+      return;
+    }
+    setLoading(true);
+    try {
+      const detail = await confirmPasswordReset({
+        uid: resetToken.uid,
+        token: resetToken.token,
+        newPassword,
+      });
+      setSuccess(detail);
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (exception) {
+      const message =
+        exception instanceof Error ? exception.message : 'Não foi possível redefinir a senha.';
+      setError(message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="login-shell">
+      <div className="login-card">
+        <div className="login-header">
+          <p className="eyebrow">Agendador · Redefinir senha</p>
+          <h1>Definir nova senha</h1>
+          <p className="lede">
+            Crie uma nova senha para sua conta. O link expira em alguns minutos.
+          </p>
+        </div>
+
+        <form className="login-form" onSubmit={handleSubmit}>
+          <label className="field">
+            <span>Nova senha</span>
+            <input
+              required
+              type="password"
+              autoComplete="new-password"
+              value={newPassword}
+              onChange={(event) => setNewPassword(event.target.value)}
+              placeholder="Sua nova senha"
+            />
+          </label>
+          <label className="field">
+            <span>Confirmar nova senha</span>
+            <input
+              required
+              type="password"
+              autoComplete="new-password"
+              value={confirmPassword}
+              onChange={(event) => setConfirmPassword(event.target.value)}
+              placeholder="Confirme a nova senha"
+            />
+          </label>
+
+          {error ? <div className="alert">{error}</div> : null}
+          {success ? <div className="success">{success}</div> : null}
+
+          <div className="form-actions">
+            <button type="submit" className="primary-button" disabled={loading}>
+              {loading ? 'Salvando...' : 'Atualizar senha'}
+            </button>
+            <button type="button" className="ghost-button" onClick={onBack}>
+              Voltar ao login
+            </button>
+          </div>
+          <p className="muted small-print">
+            Se o token estiver inválido ou expirado, peça um novo.
           </p>
         </form>
       </div>
@@ -874,8 +993,16 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<AuthError | null>(null);
   const [authScreen, setAuthScreen] = useState<AuthScreen>('login');
+  const [resetToken, setResetToken] = useState<ResetToken | null>(null);
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const uid = params.get('uid');
+    const token = params.get('token');
+    if (uid && token) {
+      setResetToken({ uid, token });
+      setAuthScreen('reset-confirm');
+    }
     fetchMe()
       .then((user) => setAuth({ token: 'session', user }))
       .catch(() => {
@@ -933,15 +1060,27 @@ export default function App() {
   }
 
   if (!auth) {
-    if (authScreen === 'reset') {
-      return <PasswordResetScreen onBack={() => setAuthScreen('login')} />;
+    if (authScreen === 'reset-confirm' && resetToken) {
+      return (
+        <PasswordResetConfirmScreen
+          resetToken={resetToken}
+          onBack={() => {
+            setAuthScreen('login');
+            setResetToken(null);
+            window.history.replaceState({}, document.title, window.location.pathname);
+          }}
+        />
+      );
+    }
+    if (authScreen === 'reset-request') {
+      return <PasswordResetRequestScreen onBack={() => setAuthScreen('login')} />;
     }
     return (
       <LoginScreen
         onLogin={handleLogin}
         loading={loading}
         error={error}
-        onForgotPassword={() => setAuthScreen('reset')}
+        onForgotPassword={() => setAuthScreen('reset-request')}
       />
     );
   }

@@ -16,7 +16,7 @@ from django.core.validators import validate_email
 from django.http import HttpRequest
 from django.middleware.csrf import get_token
 from django.utils.encoding import force_bytes
-from django.utils.http import urlsafe_base64_encode
+from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from django.views.decorators.csrf import ensure_csrf_cookie
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes, throttle_classes
@@ -219,6 +219,58 @@ def password_reset_request_view(request: Request) -> Response:
     # Resposta genérica para evitar exposição de usuários
     return Response(
         {"detail": "Se o email existir, enviaremos instruções para redefinir a senha."},
+        status=status.HTTP_200_OK,
+    )
+
+
+@api_view(["POST"])
+@permission_classes([])  # allow anonymous
+def password_reset_confirm_view(request: Request) -> Response:
+    payload: Mapping[str, Any]
+    if isinstance(request.data, Mapping):
+        payload = request.data
+    else:
+        try:
+            payload = json.loads(request.body or "{}")
+        except json.JSONDecodeError:
+            return Response({"detail": "JSON inválido."}, status=status.HTTP_400_BAD_REQUEST)
+
+    uidb64 = (payload.get("uid") or "").strip()
+    token = (payload.get("token") or "").strip()
+    new_password = (payload.get("new_password") or "").strip()
+
+    if not uidb64 or not token or not new_password:
+        return Response(
+            {"detail": "Campos obrigatórios faltando."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    try:
+        uid = urlsafe_base64_decode(uidb64).decode()
+        user = User.objects.get(pk=uid)
+    except (User.DoesNotExist, ValueError, TypeError):
+        return Response(
+            {"detail": "Token inválido ou expirado."}, status=status.HTTP_400_BAD_REQUEST
+        )
+
+    token_generator = PasswordResetTokenGenerator()
+    if not token_generator.check_token(user, token):
+        return Response(
+            {"detail": "Token inválido ou expirado."}, status=status.HTTP_400_BAD_REQUEST
+        )
+
+    try:
+        validate_password(new_password, user=user)
+    except Exception as exc:  # noqa: BLE001
+        return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+    user.set_password(new_password)
+    user.save(update_fields=["password"])
+
+    return Response(
+        {
+            "detail": "Senha redefinida com sucesso.",
+        },
         status=status.HTTP_200_OK,
     )
 
