@@ -82,16 +82,17 @@ jobs:
             git checkout master
             git reset --hard origin/master
 
-            cat > .env <<'EOF'
-${{ secrets.STAGING_ENV_FILE }}
-EMAIL_BACKEND=${{ secrets.STG_EMAIL_BACKEND }}
-EMAIL_HOST=${{ secrets.STG_EMAIL_HOST }}
-EMAIL_PORT=${{ secrets.STG_EMAIL_PORT }}
-EMAIL_USE_TLS=${{ secrets.STG_EMAIL_USE_TLS }}
-EMAIL_HOST_USER=${{ secrets.STG_EMAIL_HOST_USER }}
-EMAIL_HOST_PASSWORD=${{ secrets.STG_EMAIL_HOST_PASSWORD }}
-DEFAULT_FROM_EMAIL=${{ secrets.STG_DEFAULT_FROM_EMAIL }}
-EOF
+            {
+              printf '%s\n' "${{ secrets.STAGING_ENV_FILE }}"
+              printf '%s\n' \
+                "EMAIL_BACKEND=${{ secrets.STG_EMAIL_BACKEND }}" \
+                "EMAIL_HOST=${{ secrets.STG_EMAIL_HOST }}" \
+                "EMAIL_PORT=${{ secrets.STG_EMAIL_PORT }}" \
+                "EMAIL_USE_TLS=${{ secrets.STG_EMAIL_USE_TLS }}" \
+                "EMAIL_HOST_USER=${{ secrets.STG_EMAIL_HOST_USER }}" \
+                "EMAIL_HOST_PASSWORD=${{ secrets.STG_EMAIL_HOST_PASSWORD }}" \
+                "DEFAULT_FROM_EMAIL=${{ secrets.STG_DEFAULT_FROM_EMAIL }}"
+            } > .env
 
             printf '%s\n' \
               "services:" \
