@@ -11,10 +11,23 @@ from django.http import HttpRequest
 from django.middleware.csrf import get_token
 from django.views.decorators.csrf import ensure_csrf_cookie
 from rest_framework import status
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, throttle_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
+from rest_framework.throttling import SimpleRateThrottle
+
+
+class LoginRateThrottle(SimpleRateThrottle):
+    """Limit login attempts per IP to reduce brute-force."""
+
+    scope = "login"
+
+    def get_cache_key(self, request: Request, view: Any) -> str | None:
+        ident = self.get_ident(request)
+        if not ident:
+            return None
+        return self.cache_format % {"scope": self.scope, "ident": ident}
 
 
 def _serialize_user(user: User) -> dict[str, Any]:
@@ -46,6 +59,7 @@ def csrf_view(_request: HttpRequest) -> Response:
 
 @api_view(["POST"])
 @permission_classes([])  # allow anonymous
+@throttle_classes([LoginRateThrottle])
 def login_view(request: Request) -> Response:
     payload: Mapping[str, Any]
     if isinstance(request.data, Mapping):
