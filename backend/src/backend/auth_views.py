@@ -330,13 +330,15 @@ def password_reset_confirm_view(request: Request) -> Response:
         user = User.objects.get(pk=uid)
     except (User.DoesNotExist, ValueError, TypeError):
         return Response(
-            {"detail": "Token inválido ou expirado."}, status=status.HTTP_400_BAD_REQUEST
+            {"detail": "Token inválido ou expirado."},
+            status=status.HTTP_400_BAD_REQUEST,
         )
 
     token_generator = PasswordResetTokenGenerator()
     if not token_generator.check_token(user, token):
         return Response(
-            {"detail": "Token inválido ou expirado."}, status=status.HTTP_400_BAD_REQUEST
+            {"detail": "Token inválido ou expirado."},
+            status=status.HTTP_400_BAD_REQUEST,
         )
 
     try:
@@ -388,7 +390,8 @@ def email_change_view(request: Request) -> Response:
 
     if user.email.lower() == new_email:
         return Response(
-            {"detail": "O email informado já está cadastrado."}, status=status.HTTP_400_BAD_REQUEST
+            {"detail": "O email informado já está cadastrado."},
+            status=status.HTTP_400_BAD_REQUEST,
         )
 
     user.email = new_email

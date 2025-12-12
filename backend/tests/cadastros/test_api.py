@@ -1,11 +1,10 @@
 from __future__ import annotations
 
 import pytest
+from cadastros.models import CapacidadeSala, Local, PremissasGlobais, Profissional
 from django.contrib.auth.models import User
 from django.core.cache import cache
 from rest_framework.test import APIClient
-
-from cadastros.models import CapacidadeSala, Local, PremissasGlobais, Profissional
 
 
 @pytest.fixture()

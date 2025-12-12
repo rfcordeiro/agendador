@@ -30,6 +30,7 @@ class Local(models.Model):
     nome = models.CharField(max_length=150)
     endereco = models.CharField(max_length=255, blank=True)
     area = models.CharField(max_length=120, blank=True, help_text="Bairro ou região")
+    observacao = models.TextField(blank=True, default="")
     prioridade_cobertura = models.PositiveSmallIntegerField(default=1)
     ativo = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -51,16 +52,32 @@ class Profissional(models.Model):
         max_length=20, choices=ClassificacaoProfissional.choices, blank=True, default=""
     )
     valor_diaria = models.DecimalField(
-        max_digits=10, decimal_places=2, null=True, blank=True, help_text="Diária (MEI/Freelancer)"
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Diária (MEI/Freelancer)",
     )
     valor_salario_mensal = models.DecimalField(
-        max_digits=10, decimal_places=2, null=True, blank=True, help_text="Salário (Estagiária)"
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Salário (Estagiária)",
     )
     valor_vale_transporte = models.DecimalField(
-        max_digits=10, decimal_places=2, null=True, blank=True, help_text="Apenas estagiária"
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Apenas estagiária",
     )
     comissao_sabado = models.DecimalField(
-        max_digits=10, decimal_places=2, null=True, blank=True, help_text="Comissão sobre sábados"
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Comissão sobre sábados",
     )
     cpf = models.CharField(
         max_length=14,

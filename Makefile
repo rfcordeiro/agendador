@@ -8,7 +8,7 @@ PIP=$(PYTHON) -m pip
 RUFF=$(VENV)/bin/ruff
 MYPY=$(VENV)/bin/mypy
 
-.PHONY: help venv backend-install backend-install-dev backend-run backend-test backend-migrate backend-superuser backend-lint backend-format backend-typecheck frontend-install frontend-dev frontend-lint frontend-format frontend-typecheck compose-up compose-down compose-reset compose-migrate compose-makemigrations compose-superuser
+.PHONY: help venv backend-install backend-install-dev backend-run backend-test backend-migrate backend-superuser backend-lint backend-format backend-typecheck frontend-install frontend-dev frontend-lint frontend-format frontend-typecheck compose-up compose-down compose-reset compose-migrate compose-makemigrations compose-superuser compose-backend-lint compose-backend-format compose-backend-typecheck compose-frontend-lint compose-frontend-format compose-frontend-typecheck
 
 help:
 	@echo "Comandos comuns:"
@@ -32,6 +32,12 @@ help:
 	@echo "  make compose-makemigrations # cria migrations dentro do container backend"
 	@echo "  make compose-migrate      # migrations dentro do container backend"
 	@echo "  make compose-superuser    # superusuario dentro do container backend"
+	@echo "  make compose-backend-lint # lint do backend dentro do container"
+	@echo "  make compose-backend-format # format do backend dentro do container"
+	@echo "  make compose-backend-typecheck # mypy dentro do container"
+	@echo "  make compose-frontend-lint # eslint dentro do container"
+	@echo "  make compose-frontend-format # prettier dentro do container"
+	@echo "  make compose-frontend-typecheck # tsc --noEmit dentro do container"
 
 $(VENV):
 	$(PY_BIN) -m venv $(VENV)
@@ -96,3 +102,27 @@ compose-migrate:
 
 compose-superuser:
 	docker compose exec backend python manage.py createsuperuser
+
+compose-backend-lint:
+	docker compose run --rm \
+		-v $(shell pwd)/ruff.toml:/app/ruff.toml:ro \
+		backend sh -c "pip install -r requirements-dev.txt && ruff check ."
+
+compose-backend-format:
+	docker compose run --rm \
+		-v $(shell pwd)/ruff.toml:/app/ruff.toml:ro \
+		backend sh -c "pip install -r requirements-dev.txt && ruff format ."
+
+compose-backend-typecheck:
+	docker compose run --rm \
+		-v $(shell pwd)/mypy.ini:/app/mypy.ini:ro \
+		backend sh -c "pip install -r requirements-dev.txt && mypy --config-file mypy.ini src manage.py"
+
+compose-frontend-lint:
+	docker compose run --rm frontend npm run lint
+
+compose-frontend-format:
+	docker compose run --rm frontend npm run format
+
+compose-frontend-typecheck:
+	docker compose run --rm frontend npm run typecheck

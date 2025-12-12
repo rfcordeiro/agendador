@@ -37,6 +37,7 @@ class LocalSerializer(serializers.ModelSerializer):
             "nome",
             "endereco",
             "area",
+            "observacao",
             "prioridade_cobertura",
             "ativo",
             "created_at",

@@ -53,6 +53,7 @@ interface Local {
   nome: string;
   area: string;
   endereco: string;
+  observacao: string;
   prioridade_cobertura: number;
   ativo: boolean;
 }
@@ -224,7 +225,9 @@ async function apiJson<T>(
     headers,
   });
 
-  const data = (await response.json().catch(() => (expectArray ? [] : {}))) as T;
+  const data = (await response
+    .json()
+    .catch(() => (expectArray ? [] : {}))) as T;
 
   if (!response.ok) {
     const payload = data as Record<string, unknown>;
@@ -256,26 +259,41 @@ async function requestPasswordReset(email: string): Promise<string> {
     body: JSON.stringify({ email }),
   });
 
-  const data = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+  const data = (await response.json().catch(() => ({}))) as Record<
+    string,
+    unknown
+  >;
   const detail = typeof data.detail === 'string' ? data.detail : null;
 
   if (!response.ok) {
     throw new Error(detail ?? 'Não foi possível enviar a solicitação agora.');
   }
 
-  return detail ?? 'Se o email existir, enviaremos instruções para redefinir a senha.';
+  return (
+    detail ??
+    'Se o email existir, enviaremos instruções para redefinir a senha.'
+  );
 }
 
-async function confirmPasswordReset(input: ResetToken & { newPassword: string }): Promise<string> {
+async function confirmPasswordReset(
+  input: ResetToken & { newPassword: string },
+): Promise<string> {
   const csrf = await ensureCsrf();
   const response = await fetch('/api/auth/password/reset/confirm', {
     method: 'POST',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
-    body: JSON.stringify({ uid: input.uid, token: input.token, new_password: input.newPassword }),
+    body: JSON.stringify({
+      uid: input.uid,
+      token: input.token,
+      new_password: input.newPassword,
+    }),
   });
 
-  const data = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+  const data = (await response.json().catch(() => ({}))) as Record<
+    string,
+    unknown
+  >;
   const detail = typeof data.detail === 'string' ? data.detail : null;
 
   if (!response.ok) {
@@ -285,11 +303,16 @@ async function confirmPasswordReset(input: ResetToken & { newPassword: string })
   return detail ?? 'Senha redefinida com sucesso.';
 }
 
-function normalizeUser(userPayload: UserPayload | undefined, fallbackUsername: string): User {
+function normalizeUser(
+  userPayload: UserPayload | undefined,
+  fallbackUsername: string,
+): User {
   const roles = toStringArray(userPayload?.roles);
   const permissions = toStringArray(userPayload?.permissions);
   const isStaff = Boolean(userPayload?.isStaff ?? userPayload?.is_staff);
-  const isSuperuser = Boolean(userPayload?.isSuperuser ?? userPayload?.is_superuser);
+  const isSuperuser = Boolean(
+    userPayload?.isSuperuser ?? userPayload?.is_superuser,
+  );
   const rawUsername =
     typeof userPayload?.username === 'string' && userPayload.username.trim()
       ? userPayload.username
@@ -325,7 +348,10 @@ async function fetchMe(): Promise<User> {
     throw new Error('Sessão expirada. Faça login novamente.');
   }
 
-  const data = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+  const data = (await response.json().catch(() => ({}))) as Record<
+    string,
+    unknown
+  >;
   const userPayload = data.user as UserPayload | undefined;
   if (!userPayload) {
     throw new Error('Resposta do servidor sem usuário.');
@@ -346,15 +372,30 @@ const navItems = [
 ];
 
 const metricsCards = [
-  { title: 'Próximas escalas', value: '3 semanas', detail: 'Geração automática ativa', tone: 'ok' },
-  { title: 'Pendências', value: '5 itens', detail: 'Aprovar e publicar', tone: 'warn' },
+  {
+    title: 'Próximas escalas',
+    value: '3 semanas',
+    detail: 'Geração automática ativa',
+    tone: 'ok',
+  },
+  {
+    title: 'Pendências',
+    value: '5 itens',
+    detail: 'Aprovar e publicar',
+    tone: 'warn',
+  },
   {
     title: 'Jobs de sync',
     value: '2/2',
     detail: 'Google Calendar e Redis ok',
     tone: 'ok',
   },
-  { title: 'Ajustes manuais', value: '12', detail: 'Revisar Savassi/Lourdes', tone: 'info' },
+  {
+    title: 'Ajustes manuais',
+    value: '12',
+    detail: 'Revisar Savassi/Lourdes',
+    tone: 'info',
+  },
 ];
 
 const highlights = [
@@ -370,7 +411,11 @@ const quickActions: QuickAction[] = [
     tone: 'primary',
     permission: ['schedules.add_schedule', 'escala.add_escala'],
   },
-  { label: 'Importar calendário', tone: 'secondary', permission: 'integrations.import_calendar' },
+  {
+    label: 'Importar calendário',
+    tone: 'secondary',
+    permission: 'integrations.import_calendar',
+  },
   { label: 'Ver inconsistências', tone: 'ghost' },
 ];
 
@@ -393,25 +438,40 @@ const classificacoes = [
 function Modal({ open, title, onClose, children, description }: ModalProps) {
   if (!open) return null;
   return (
-    <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label={title}>
-      <div className="modal-card">
-        <div className="modal-header">
+    <div
+      className='modal-backdrop'
+      role='dialog'
+      aria-modal='true'
+      aria-label={title}
+    >
+      <div className='modal-card'>
+        <div className='modal-header'>
           <div>
-            <p className="eyebrow">Cadastro</p>
+            <p className='eyebrow'>Cadastro</p>
             <h3>{title}</h3>
-            {description ? <p className="muted">{description}</p> : null}
+            {description ? <p className='muted'>{description}</p> : null}
           </div>
-          <button className="ghost-button" type="button" onClick={onClose} aria-label="Fechar">
+          <button
+            className='ghost-button'
+            type='button'
+            onClick={onClose}
+            aria-label='Fechar'
+          >
             ✕
           </button>
         </div>
-        <div className="modal-body">{children}</div>
+        <div className='modal-body'>{children}</div>
       </div>
     </div>
   );
 }
 
-function PermissionsWidget({ roles, permissions, isStaff, isSuperuser }: PermissionWidgetProps) {
+function PermissionsWidget({
+  roles,
+  permissions,
+  isStaff,
+  isSuperuser,
+}: PermissionWidgetProps) {
   const [query, setQuery] = useState('');
   const normalizedRoles = roles.length ? roles : ['operador'];
   const normalizedPermissions = useMemo(
@@ -421,7 +481,9 @@ function PermissionsWidget({ roles, permissions, isStaff, isSuperuser }: Permiss
   const filteredPermissions = useMemo(() => {
     const term = query.trim().toLowerCase();
     if (!term) return normalizedPermissions;
-    return normalizedPermissions.filter((permission) => permission.toLowerCase().includes(term));
+    return normalizedPermissions.filter((permission) =>
+      permission.toLowerCase().includes(term),
+    );
   }, [normalizedPermissions, query]);
 
   const badges = [
@@ -432,43 +494,50 @@ function PermissionsWidget({ roles, permissions, isStaff, isSuperuser }: Permiss
   const resultsLabel = `Exibindo ${filteredPermissions.length} de ${normalizedPermissions.length} permissões`;
 
   return (
-    <div className="permissions-widget" aria-label="Roles e permissões da sessão">
-      <div className="permission-header">
+    <div
+      className='permissions-widget'
+      aria-label='Roles e permissões da sessão'
+    >
+      <div className='permission-header'>
         <div>
-          <p className="eyebrow">Roles e permissões</p>
+          <p className='eyebrow'>Roles e permissões</p>
           <h3>Explorador de acesso</h3>
-          <p className="muted">Pesquise e valide o que o usuário pode fazer na interface.</p>
+          <p className='muted'>
+            Pesquise e valide o que o usuário pode fazer na interface.
+          </p>
         </div>
-        <div className="permission-counts">
-          <span className="pill pill-soft">{normalizedRoles.length} roles</span>
-          <span className="pill">{normalizedPermissions.length} permissões</span>
+        <div className='permission-counts'>
+          <span className='pill pill-soft'>{normalizedRoles.length} roles</span>
+          <span className='pill'>
+            {normalizedPermissions.length} permissões
+          </span>
         </div>
       </div>
 
-      <div className="permission-meta">
-        <div className="chip-row">
+      <div className='permission-meta'>
+        <div className='chip-row'>
           {normalizedRoles.map((roleItem) => (
-            <span key={roleItem} className="pill pill-soft">
+            <span key={roleItem} className='pill pill-soft'>
               {roleItem}
             </span>
           ))}
           {badges.map((badge) => (
-            <span key={badge} className="pill">
+            <span key={badge} className='pill'>
               {badge}
             </span>
           ))}
         </div>
-        <div className="permission-search">
-          <label className="field-label" htmlFor="permission-search">
+        <div className='permission-search'>
+          <label className='field-label' htmlFor='permission-search'>
             <span>Pesquisar permissão</span>
-            <small className="muted">{resultsLabel}</small>
+            <small className='muted'>{resultsLabel}</small>
           </label>
-          <div className="search-input">
+          <div className='search-input'>
             <span aria-hidden>🔎</span>
             <input
-              id="permission-search"
-              type="search"
-              placeholder="Ex.: schedules.add_schedule"
+              id='permission-search'
+              type='search'
+              placeholder='Ex.: schedules.add_schedule'
               value={query}
               onChange={(event) => setQuery(event.target.value)}
             />
@@ -477,15 +546,15 @@ function PermissionsWidget({ roles, permissions, isStaff, isSuperuser }: Permiss
       </div>
 
       {filteredPermissions.length ? (
-        <div className="permission-list" role="list">
+        <div className='permission-list' role='list'>
           {filteredPermissions.map((permission) => (
-            <span key={permission} className="permission-item" role="listitem">
+            <span key={permission} className='permission-item' role='listitem'>
               {permission}
             </span>
           ))}
         </div>
       ) : (
-        <p className="muted permission-empty">
+        <p className='muted permission-empty'>
           {query
             ? 'Nenhuma permissão encontrada para este filtro.'
             : 'Nenhuma permissão informada.'}
@@ -510,13 +579,21 @@ async function authenticate(credentials: Credentials): Promise<AuthState> {
     body: JSON.stringify(credentials),
   });
 
-  const data = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+  const data = (await response.json().catch(() => ({}))) as Record<
+    string,
+    unknown
+  >;
   if (!response.ok) {
     const detail = typeof data.detail === 'string' ? data.detail : null;
     if (response.status === 429) {
-      throw new Error(detail ?? 'Muitas tentativas de login. Aguarde um minuto e tente novamente.');
+      throw new Error(
+        detail ??
+          'Muitas tentativas de login. Aguarde um minuto e tente novamente.',
+      );
     }
-    throw new Error(detail ?? 'Usuário ou senha inválidos ou serviço indisponível.');
+    throw new Error(
+      detail ?? 'Usuário ou senha inválidos ou serviço indisponível.',
+    );
   }
   const userPayload = data.user as UserPayload | undefined;
   const user = normalizeUser(userPayload, credentials.username);
@@ -530,14 +607,22 @@ async function changePassword(input: ChangePasswordInput): Promise<void> {
     method: 'POST',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
-    body: JSON.stringify({ old_password: input.oldPassword, new_password: input.newPassword }),
+    body: JSON.stringify({
+      old_password: input.oldPassword,
+      new_password: input.newPassword,
+    }),
   });
 
   if (!response.ok) {
-    const data = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+    const data = (await response.json().catch(() => ({}))) as Record<
+      string,
+      unknown
+    >;
     const detail = typeof data.detail === 'string' ? data.detail : null;
     if (response.status === 403) {
-      throw new Error(detail ?? 'Sessão expirada ou CSRF inválido. Faça login novamente.');
+      throw new Error(
+        detail ?? 'Sessão expirada ou CSRF inválido. Faça login novamente.',
+      );
     }
     throw new Error(detail ?? 'Não foi possível trocar a senha.');
   }
@@ -552,7 +637,10 @@ async function changeEmail(input: ChangeEmailInput): Promise<User> {
     body: JSON.stringify({ email: input.email }),
   });
 
-  const data = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+  const data = (await response.json().catch(() => ({}))) as Record<
+    string,
+    unknown
+  >;
   const detail = typeof data.detail === 'string' ? data.detail : null;
   const userPayload = data.user as UserPayload | undefined;
 
@@ -567,7 +655,9 @@ async function changeEmail(input: ChangeEmailInput): Promise<User> {
 }
 
 async function fetchLocais(): Promise<Local[]> {
-  return apiJson<Local[]>('/api/cadastros/locais/', undefined, { expectArray: true });
+  return apiJson<Local[]>('/api/cadastros/locais/', undefined, {
+    expectArray: true,
+  });
 }
 
 async function createLocal(payload: Partial<Local>): Promise<Local> {
@@ -579,7 +669,10 @@ async function createLocal(payload: Partial<Local>): Promise<Local> {
   });
 }
 
-async function updateLocal(id: number, payload: Partial<Local>): Promise<Local> {
+async function updateLocal(
+  id: number,
+  payload: Partial<Local>,
+): Promise<Local> {
   const csrf = await ensureCsrf();
   return apiJson<Local>(`/api/cadastros/locais/${id}/`, {
     method: 'PUT',
@@ -589,7 +682,9 @@ async function updateLocal(id: number, payload: Partial<Local>): Promise<Local> 
 }
 
 async function fetchSalas(): Promise<Sala[]> {
-  return apiJson<Sala[]>('/api/cadastros/salas/', undefined, { expectArray: true });
+  return apiJson<Sala[]>('/api/cadastros/salas/', undefined, {
+    expectArray: true,
+  });
 }
 
 async function createSala(payload: Partial<Sala>): Promise<Sala> {
@@ -618,7 +713,9 @@ async function deleteSala(id: number): Promise<void> {
   });
 }
 
-async function createCapacidadeSala(payload: Partial<CapacidadeSala>): Promise<CapacidadeSala> {
+async function createCapacidadeSala(
+  payload: Partial<CapacidadeSala>,
+): Promise<CapacidadeSala> {
   const csrf = await ensureCsrf();
   return apiJson<CapacidadeSala>('/api/cadastros/capacidade-salas/', {
     method: 'POST',
@@ -633,7 +730,7 @@ async function updateCapacidadeSala(
 ): Promise<CapacidadeSala> {
   const csrf = await ensureCsrf();
   return apiJson<CapacidadeSala>(`/api/cadastros/capacidade-salas/${id}/`, {
-    method: 'PUT',
+    method: 'PATCH',
     body: JSON.stringify({ data_especial: null, restricoes: '', ...payload }),
     headers: { 'X-CSRFToken': csrf },
   });
@@ -656,15 +753,23 @@ async function deleteLocal(id: number): Promise<void> {
 }
 
 async function fetchCapacidades(): Promise<CapacidadeSala[]> {
-  return apiJson<CapacidadeSala[]>('/api/cadastros/capacidade-salas/', undefined, {
-    expectArray: true,
-  });
+  return apiJson<CapacidadeSala[]>(
+    '/api/cadastros/capacidade-salas/',
+    undefined,
+    {
+      expectArray: true,
+    },
+  );
 }
 
 async function fetchProfissionais(): Promise<ProfissionalCadastro[]> {
-  return apiJson<ProfissionalCadastro[]>('/api/cadastros/profissionais/', undefined, {
-    expectArray: true,
-  });
+  return apiJson<ProfissionalCadastro[]>(
+    '/api/cadastros/profissionais/',
+    undefined,
+    {
+      expectArray: true,
+    },
+  );
 }
 
 async function createProfissional(
@@ -703,20 +808,29 @@ async function updateProfissional(
 }
 
 async function fetchPremissas(): Promise<PremissasGlobais | null> {
-  const data = await apiJson<PremissasGlobais[]>('/api/cadastros/premissas-globais/', undefined, {
-    expectArray: true,
-  });
+  const data = await apiJson<PremissasGlobais[]>(
+    '/api/cadastros/premissas-globais/',
+    undefined,
+    {
+      expectArray: true,
+    },
+  );
   return data[0] ?? null;
 }
 
-async function upsertPremissas(payload: PremissasGlobais): Promise<PremissasGlobais> {
+async function upsertPremissas(
+  payload: PremissasGlobais,
+): Promise<PremissasGlobais> {
   const csrf = await ensureCsrf();
   if (payload.id) {
-    return apiJson<PremissasGlobais>(`/api/cadastros/premissas-globais/${payload.id}/`, {
-      method: 'PUT',
-      body: JSON.stringify(payload),
-      headers: { 'X-CSRFToken': csrf },
-    });
+    return apiJson<PremissasGlobais>(
+      `/api/cadastros/premissas-globais/${payload.id}/`,
+      {
+        method: 'PUT',
+        body: JSON.stringify(payload),
+        headers: { 'X-CSRFToken': csrf },
+      },
+    );
   }
   return apiJson<PremissasGlobais>('/api/cadastros/premissas-globais/', {
     method: 'POST',
@@ -733,13 +847,13 @@ function PasswordRulesHint() {
   const toggle = () => setOpen((value) => !value);
 
   return (
-    <div className="tooltip" onMouseLeave={hide}>
+    <div className='tooltip' onMouseLeave={hide}>
       <button
-        type="button"
-        className="info-button"
-        aria-label="Ver regras de senha"
+        type='button'
+        className='info-button'
+        aria-label='Ver regras de senha'
         aria-expanded={open}
-        aria-controls="password-rules"
+        aria-controls='password-rules'
         onMouseEnter={show}
         onFocus={show}
         onBlur={hide}
@@ -748,10 +862,10 @@ function PasswordRulesHint() {
         ?
       </button>
       <div
-        id="password-rules"
-        role="note"
+        id='password-rules'
+        role='note'
         className={`tooltip-card${open ? ' visible' : ''}`}
-        aria-live="polite"
+        aria-live='polite'
       >
         <p>Regras recomendadas:</p>
         <ul>
@@ -784,48 +898,52 @@ function LoginScreen({
   };
 
   return (
-    <div className="login-shell">
-      <div className="login-card">
-        <div className="login-header">
-          <p className="eyebrow">Agendador · Acesso</p>
+    <div className='login-shell'>
+      <div className='login-card'>
+        <div className='login-header'>
+          <p className='eyebrow'>Agendador · Acesso</p>
           <h1>Entre com suas credenciais</h1>
-          <p className="lede">
-            A autenticação usa sessão segura. Em produção, tokens ficam em cookie seguro; em dev
-            usamos armazenamento local.
+          <p className='lede'>
+            A autenticação usa sessão segura. Em produção, tokens ficam em
+            cookie seguro; em dev usamos armazenamento local.
           </p>
         </div>
 
-        <form className="login-form" onSubmit={handleSubmit}>
-          <label className="field">
+        <form className='login-form' onSubmit={handleSubmit}>
+          <label className='field'>
             <span>Usuário ou email</span>
             <input
               required
-              autoComplete="username"
+              autoComplete='username'
               value={username}
               onChange={(event) => setUsername(event.target.value)}
-              placeholder="seu.email@exemplo.com"
+              placeholder='seu.email@exemplo.com'
             />
           </label>
 
-          <label className="field">
+          <label className='field'>
             <span>Senha</span>
             <input
               required
-              type="password"
-              autoComplete="current-password"
+              type='password'
+              autoComplete='current-password'
               value={password}
               onChange={(event) => setPassword(event.target.value)}
-              placeholder="••••••••"
+              placeholder='••••••••'
             />
           </label>
 
-          {error ? <div className="alert">{error.message}</div> : null}
+          {error ? <div className='alert'>{error.message}</div> : null}
 
-          <button type="submit" className="primary-button" disabled={loading}>
+          <button type='submit' className='primary-button' disabled={loading}>
             {loading ? 'Autenticando...' : 'Entrar'}
           </button>
-          <div className="form-footnote">
-            <button type="button" className="link-button" onClick={onForgotPassword}>
+          <div className='form-footnote'>
+            <button
+              type='button'
+              className='link-button'
+              onClick={onForgotPassword}
+            >
               Esqueci a senha
             </button>
           </div>
@@ -862,43 +980,44 @@ function PasswordResetRequestScreen({ onBack }: { onBack: () => void }) {
   };
 
   return (
-    <div className="login-shell">
-      <div className="login-card">
-        <div className="login-header">
-          <p className="eyebrow">Agendador · Recuperar acesso</p>
+    <div className='login-shell'>
+      <div className='login-card'>
+        <div className='login-header'>
+          <p className='eyebrow'>Agendador · Recuperar acesso</p>
           <h1>Esqueci a senha</h1>
-          <p className="lede">
-            Informe seu email. Se existir em nossa base, enviaremos instruções para redefinir a
-            senha.
+          <p className='lede'>
+            Informe seu email. Se existir em nossa base, enviaremos instruções
+            para redefinir a senha.
           </p>
         </div>
 
-        <form className="login-form" onSubmit={handleSubmit}>
-          <label className="field">
+        <form className='login-form' onSubmit={handleSubmit}>
+          <label className='field'>
             <span>Email</span>
             <input
               required
-              type="email"
-              autoComplete="email"
+              type='email'
+              autoComplete='email'
               value={email}
               onChange={(event) => setEmail(event.target.value)}
-              placeholder="seu.email@exemplo.com"
+              placeholder='seu.email@exemplo.com'
             />
           </label>
 
-          {error ? <div className="alert">{error}</div> : null}
-          {success ? <div className="success">{success}</div> : null}
+          {error ? <div className='alert'>{error}</div> : null}
+          {success ? <div className='success'>{success}</div> : null}
 
-          <div className="form-actions">
-            <button type="submit" className="primary-button" disabled={loading}>
+          <div className='form-actions'>
+            <button type='submit' className='primary-button' disabled={loading}>
               {loading ? 'Enviando...' : 'Enviar instruções'}
             </button>
-            <button type="button" className="ghost-button" onClick={onBack}>
+            <button type='button' className='ghost-button' onClick={onBack}>
               Voltar ao login
             </button>
           </div>
-          <p className="muted small-print">
-            Simulação: o backend registra o pedido no log/console. Ajuste SMTP para envio real.
+          <p className='muted small-print'>
+            Simulação: o backend registra o pedido no log/console. Ajuste SMTP
+            para envio real.
           </p>
         </form>
       </div>
@@ -942,7 +1061,9 @@ function PasswordResetConfirmScreen({
       }, 1200);
     } catch (exception) {
       const message =
-        exception instanceof Error ? exception.message : 'Não foi possível redefinir a senha.';
+        exception instanceof Error
+          ? exception.message
+          : 'Não foi possível redefinir a senha.';
       setError(message);
     } finally {
       setLoading(false);
@@ -950,53 +1071,55 @@ function PasswordResetConfirmScreen({
   };
 
   return (
-    <div className="login-shell">
-      <div className="login-card">
-        <div className="login-header">
-          <p className="eyebrow">Agendador · Redefinir senha</p>
+    <div className='login-shell'>
+      <div className='login-card'>
+        <div className='login-header'>
+          <p className='eyebrow'>Agendador · Redefinir senha</p>
           <h1>Definir nova senha</h1>
-          <p className="lede">
+          <p className='lede'>
             Crie uma nova senha para sua conta. O link expira em alguns minutos.
           </p>
         </div>
 
-        <form className="login-form" onSubmit={handleSubmit}>
-          <label className="field">
+        <form className='login-form' onSubmit={handleSubmit}>
+          <label className='field'>
             <span>Nova senha</span>
             <input
               required
-              type="password"
-              autoComplete="new-password"
+              type='password'
+              autoComplete='new-password'
               value={newPassword}
               onChange={(event) => setNewPassword(event.target.value)}
-              placeholder="Sua nova senha"
+              placeholder='Sua nova senha'
             />
           </label>
-          <label className="field">
+          <label className='field'>
             <span>Confirmar nova senha</span>
             <input
               required
-              type="password"
-              autoComplete="new-password"
+              type='password'
+              autoComplete='new-password'
               value={confirmPassword}
               onChange={(event) => setConfirmPassword(event.target.value)}
-              placeholder="Confirme a nova senha"
+              placeholder='Confirme a nova senha'
             />
           </label>
 
-          {error ? <div className="alert">{error}</div> : null}
-          {success ? <div className="success">{success}</div> : null}
-          {redirecting ? <p className="muted">Redirecionando para o login...</p> : null}
+          {error ? <div className='alert'>{error}</div> : null}
+          {success ? <div className='success'>{success}</div> : null}
+          {redirecting ? (
+            <p className='muted'>Redirecionando para o login...</p>
+          ) : null}
 
-          <div className="form-actions">
-            <button type="submit" className="primary-button" disabled={loading}>
+          <div className='form-actions'>
+            <button type='submit' className='primary-button' disabled={loading}>
               {loading ? 'Salvando...' : 'Atualizar senha'}
             </button>
-            <button type="button" className="ghost-button" onClick={onBack}>
+            <button type='button' className='ghost-button' onClick={onBack}>
               Voltar ao login
             </button>
           </div>
-          <p className="muted small-print">
+          <p className='muted small-print'>
             Se o token estiver inválido ou expirado, peça um novo.
           </p>
         </form>
@@ -1006,7 +1129,9 @@ function PasswordResetConfirmScreen({
 }
 
 function ProfissionaisPage() {
-  const [profissionais, setProfissionais] = useState<ProfissionalCadastro[]>([]);
+  const [profissionais, setProfissionais] = useState<ProfissionalCadastro[]>(
+    [],
+  );
   const [locais, setLocais] = useState<Local[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -1055,7 +1180,9 @@ function ProfissionaisPage() {
       setLocais(locaisData);
     } catch (exception) {
       const message =
-        exception instanceof Error ? exception.message : 'Falha ao carregar cadastros.';
+        exception instanceof Error
+          ? exception.message
+          : 'Falha ao carregar cadastros.';
       setError(message);
     } finally {
       setLoading(false);
@@ -1068,17 +1195,20 @@ function ProfissionaisPage() {
 
   const classificacaoByValue = useMemo(
     () =>
-      classificacoes.reduce<Record<string, { label: string; badgeClass: string }>>(
-        (accumulator, item) => {
-          accumulator[item.value] = { label: item.label, badgeClass: item.badgeClass };
-          return accumulator;
-        },
-        {},
-      ),
+      classificacoes.reduce<
+        Record<string, { label: string; badgeClass: string }>
+      >((accumulator, item) => {
+        accumulator[item.value] = {
+          label: item.label,
+          badgeClass: item.badgeClass,
+        };
+        return accumulator;
+      }, {}),
     [],
   );
   const isEstagiaria = form.classificacao === 'estagiaria';
-  const isMeiOuFreelancer = form.classificacao === 'mei' || form.classificacao === 'freelancer';
+  const isMeiOuFreelancer =
+    form.classificacao === 'mei' || form.classificacao === 'freelancer';
   const salarioDisabled = isMeiOuFreelancer || Boolean(form.valor_diaria);
   const diariaDisabled = isEstagiaria || Boolean(form.valor_salario_mensal);
   const contratoLink = form.link_contrato?.trim() || '';
@@ -1104,7 +1234,9 @@ function ProfissionaisPage() {
     }
   }, [isEstagiaria, isMeiOuFreelancer]);
 
-  const handleMultiSelect = (options: HTMLCollectionOf<HTMLOptionElement>): number[] =>
+  const handleMultiSelect = (
+    options: HTMLCollectionOf<HTMLOptionElement>,
+  ): number[] =>
     Array.from(options)
       .filter((option) => option.selected)
       .map((option) => Number(option.value));
@@ -1136,7 +1268,9 @@ function ProfissionaisPage() {
       };
       if (editing) {
         const updated = await updateProfissional(editing.id, payload);
-        setProfissionais((prev) => prev.map((prof) => (prof.id === updated.id ? updated : prof)));
+        setProfissionais((prev) =>
+          prev.map((prof) => (prof.id === updated.id ? updated : prof)),
+        );
         setSuccess('Profissional atualizado.');
         setEditing(null);
       } else {
@@ -1175,36 +1309,47 @@ function ProfissionaisPage() {
       setShowModal(false);
     } catch (exception) {
       const message =
-        exception instanceof Error ? exception.message : 'Erro ao salvar profissional.';
+        exception instanceof Error
+          ? exception.message
+          : 'Erro ao salvar profissional.';
       setError(message);
     }
   };
 
   return (
-    <section className="panel">
-      <div className="panel-header">
+    <section className='panel'>
+      <div className='panel-header'>
         <div>
-          <p className="eyebrow">Cadastros</p>
+          <p className='eyebrow'>Cadastros</p>
           <h2>Profissionais</h2>
-          <p className="lede">
-            Tabela com um profissional por linha. Edição virá em ações por registro.
+          <p className='lede'>
+            Tabela com um profissional por linha. Edição virá em ações por
+            registro.
           </p>
         </div>
-        <div className="panel-actions">
-          <button className="primary-button" type="button" onClick={() => setShowModal(true)}>
+        <div className='panel-actions'>
+          <button
+            className='primary-button'
+            type='button'
+            onClick={() => setShowModal(true)}
+          >
             + Adicionar
           </button>
-          <button className="ghost-button small" type="button" onClick={() => setShowHelp(true)}>
+          <button
+            className='ghost-button small'
+            type='button'
+            onClick={() => setShowHelp(true)}
+          >
             ?
           </button>
         </div>
       </div>
-      {error ? <div className="alert">{error}</div> : null}
-      {success ? <div className="success">{success}</div> : null}
+      {error ? <div className='alert'>{error}</div> : null}
+      {success ? <div className='success'>{success}</div> : null}
       {loading ? (
-        <p className="muted">Carregando profissionais...</p>
+        <p className='muted'>Carregando profissionais...</p>
       ) : (
-        <div className="table-card">
+        <div className='table-card'>
           <table>
             <thead>
               <tr>
@@ -1222,18 +1367,20 @@ function ProfissionaisPage() {
               {profissionais.map((profissional) => (
                 <tr key={profissional.id}>
                   <td>{profissional.nome}</td>
-                  <td className="muted">{profissional.email}</td>
+                  <td className='muted'>{profissional.email}</td>
                   <td>
                     {profissional.classificacao ? (
                       <span
                         className={`badge-class ${
-                          classificacaoByValue[profissional.classificacao]?.badgeClass ?? ''
+                          classificacaoByValue[profissional.classificacao]
+                            ?.badgeClass ?? ''
                         }`}
                       >
-                        {classificacaoByValue[profissional.classificacao]?.label ?? 'Outro'}
+                        {classificacaoByValue[profissional.classificacao]
+                          ?.label ?? 'Outro'}
                       </span>
                     ) : (
-                      <span className="muted">—</span>
+                      <span className='muted'>—</span>
                     )}
                   </td>
                   <td>{profissional.turno_preferencial || '—'}</td>
@@ -1241,28 +1388,29 @@ function ProfissionaisPage() {
                   <td>{profissional.limite_dobras_semana}</td>
                   <td>
                     {profissional.tags?.length ? (
-                      <div className="chip-row inline-chips">
+                      <div className='chip-row inline-chips'>
                         {profissional.tags.map((tag) => (
-                          <span key={tag} className="pill pill-soft">
+                          <span key={tag} className='pill pill-soft'>
                             {tag}
                           </span>
                         ))}
                       </div>
                     ) : (
-                      <span className="muted">—</span>
+                      <span className='muted'>—</span>
                     )}
                   </td>
                   <td>
                     <button
-                      className="ghost-button small"
-                      type="button"
+                      className='ghost-button small'
+                      type='button'
                       onClick={() => {
                         setEditing(profissional);
                         setForm({
                           nome: profissional.nome,
                           email: profissional.email,
                           turno_preferencial: profissional.turno_preferencial,
-                          classificacao: profissional.classificacao || 'estagiaria',
+                          classificacao:
+                            profissional.classificacao || 'estagiaria',
                           valor_diaria:
                             profissional.valor_diaria !== null &&
                             profissional.valor_diaria !== undefined
@@ -1293,13 +1441,16 @@ function ProfissionaisPage() {
                           nome_empresarial: profissional.nome_empresarial || '',
                           endereco_empresa: profissional.endereco_empresa || '',
                           cnae: profissional.cnae || '',
-                          inscricao_municipal: profissional.inscricao_municipal || '',
+                          inscricao_municipal:
+                            profissional.inscricao_municipal || '',
                           data_contrato: profissional.data_contrato || '',
                           carga_semanal_alvo: profissional.carga_semanal_alvo,
-                          limite_dobras_semana: profissional.limite_dobras_semana,
+                          limite_dobras_semana:
+                            profissional.limite_dobras_semana,
                           google_calendar_id: profissional.google_calendar_id,
                           tags: (profissional.tags || []).join(', '),
-                          locais_preferidos: profissional.locais_preferidos || [],
+                          locais_preferidos:
+                            profissional.locais_preferidos || [],
                           locais_proibidos: profissional.locais_proibidos || [],
                         });
                         setShowModal(true);
@@ -1312,7 +1463,7 @@ function ProfissionaisPage() {
               ))}
               {!profissionais.length ? (
                 <tr>
-                  <td colSpan={8} className="muted">
+                  <td colSpan={8} className='muted'>
                     Nenhum profissional cadastrado.
                   </td>
                 </tr>
@@ -1325,35 +1476,46 @@ function ProfissionaisPage() {
       <Modal
         open={showHelp}
         onClose={() => setShowHelp(false)}
-        title="Como cadastrar profissionais"
-        description="Campos essenciais e como serão usados."
+        title='Como cadastrar profissionais'
+        description='Campos essenciais e como serão usados.'
       >
-        <ul className="help-list">
+        <ul className='help-list'>
           <li>
-            Profissional é a pessoa que atende; nome e email são usados para login e notificações.
+            Profissional é a pessoa que atende; nome e email são usados para
+            login e notificações.
           </li>
           <li>
-            Turno preferencial é opcional; carga alvo até 70h e limite de dobras evitam excesso de
-            alocação.
+            Turno preferencial é opcional; carga alvo até 70h e limite de dobras
+            evitam excesso de alocação.
           </li>
           <li>
-            Classificação diferencia Estagiária, MEI ou Freelancer para regras de alocação e fica
-            visível nos badges da tabela.
+            Classificação diferencia Estagiária, MEI ou Freelancer para regras
+            de alocação e fica visível nos badges da tabela.
           </li>
           <li>
-            Diária é usada para MEI/Freelancer; salário e vale transporte são para Estagiária.
-            Preencher um zera o outro campo automaticamente.
-          </li>
-          <li>CPF sempre é aceito; CNPJ e dados empresariais só se forem MEI/Freelancer.</li>
-          <li>Link do contrato aceita URL do Drive com atalho para visualizar o PDF.</li>
-          <li>
-            Tags descrevem perfis (ex.: treinador, júnior, sábado) e ajudam nos filtros/heurística.
+            Diária é usada para MEI/Freelancer; salário e vale transporte são
+            para Estagiária. Preencher um zera o outro campo automaticamente.
           </li>
           <li>
-            Locais preferidos/proibidos guiam o revezamento; um local não pode estar nas duas
-            listas.
+            CPF sempre é aceito; CNPJ e dados empresariais só se forem
+            MEI/Freelancer.
           </li>
-          <li>ID da agenda Google é o calendarId usado para publicar eventos e ler conflitos.</li>
+          <li>
+            Link do contrato aceita URL do Drive com atalho para visualizar o
+            PDF.
+          </li>
+          <li>
+            Tags descrevem perfis (ex.: treinador, júnior, sábado) e ajudam nos
+            filtros/heurística.
+          </li>
+          <li>
+            Locais preferidos/proibidos guiam o revezamento; um local não pode
+            estar nas duas listas.
+          </li>
+          <li>
+            ID da agenda Google é o calendarId usado para publicar eventos e ler
+            conflitos.
+          </li>
         </ul>
       </Modal>
 
@@ -1364,47 +1526,55 @@ function ProfissionaisPage() {
           setEditing(null);
         }}
         title={editing ? 'Editar profissional' : 'Cadastrar profissional'}
-        description="Nome, email, turno preferencial e limites de carga."
+        description='Nome, email, turno preferencial e limites de carga.'
       >
-        <form className="account-form" onSubmit={handleSubmit}>
-          <div className="two-cols">
-            <label className="field">
+        <form className='account-form' onSubmit={handleSubmit}>
+          <div className='two-cols'>
+            <label className='field'>
               <span>Nome</span>
               <input
                 required
                 value={form.nome}
-                onChange={(event) => setForm({ ...form, nome: event.target.value })}
-                placeholder="Nome completo"
+                onChange={(event) =>
+                  setForm({ ...form, nome: event.target.value })
+                }
+                placeholder='Nome completo'
               />
             </label>
-            <label className="field">
+            <label className='field'>
               <span>Email</span>
               <input
                 required
-                type="email"
+                type='email'
                 value={form.email}
-                onChange={(event) => setForm({ ...form, email: event.target.value })}
-                placeholder="pessoa@exemplo.com"
+                onChange={(event) =>
+                  setForm({ ...form, email: event.target.value })
+                }
+                placeholder='pessoa@exemplo.com'
               />
             </label>
           </div>
-          <div className="two-cols">
-            <label className="field">
+          <div className='two-cols'>
+            <label className='field'>
               <span>Turno preferencial</span>
               <select
                 value={form.turno_preferencial}
-                onChange={(event) => setForm({ ...form, turno_preferencial: event.target.value })}
+                onChange={(event) =>
+                  setForm({ ...form, turno_preferencial: event.target.value })
+                }
               >
-                <option value="">Sem preferência</option>
-                <option value="manha">Manhã</option>
-                <option value="tarde">Tarde</option>
+                <option value=''>Sem preferência</option>
+                <option value='manha'>Manhã</option>
+                <option value='tarde'>Tarde</option>
               </select>
             </label>
-            <label className="field">
+            <label className='field'>
               <span>Classificação</span>
               <select
                 value={form.classificacao}
-                onChange={(event) => setForm({ ...form, classificacao: event.target.value })}
+                onChange={(event) =>
+                  setForm({ ...form, classificacao: event.target.value })
+                }
               >
                 {classificacoes.map((option) => (
                   <option key={option.value} value={option.value}>
@@ -1414,46 +1584,54 @@ function ProfissionaisPage() {
               </select>
             </label>
           </div>
-          <div className="two-cols">
-            <label className="field">
+          <div className='two-cols'>
+            <label className='field'>
               <span>Carga semanal alvo (h)</span>
               <input
-                type="number"
+                type='number'
                 min={1}
                 max={70}
                 value={form.carga_semanal_alvo}
                 onChange={(event) =>
-                  setForm({ ...form, carga_semanal_alvo: Number(event.target.value) })
+                  setForm({
+                    ...form,
+                    carga_semanal_alvo: Number(event.target.value),
+                  })
                 }
               />
             </label>
-            <label className="field">
+            <label className='field'>
               <span>Limite de dobras/semana</span>
               <input
-                type="number"
+                type='number'
                 min={0}
                 max={14}
                 value={form.limite_dobras_semana}
                 onChange={(event) =>
-                  setForm({ ...form, limite_dobras_semana: Number(event.target.value) })
+                  setForm({
+                    ...form,
+                    limite_dobras_semana: Number(event.target.value),
+                  })
                 }
               />
             </label>
           </div>
-          <label className="field">
+          <label className='field'>
             <span>ID Agenda Google</span>
             <input
               value={form.google_calendar_id}
-              onChange={(event) => setForm({ ...form, google_calendar_id: event.target.value })}
-              placeholder="calendar-id"
+              onChange={(event) =>
+                setForm({ ...form, google_calendar_id: event.target.value })
+              }
+              placeholder='calendar-id'
             />
           </label>
-          <div className="two-cols">
-            <label className="field">
+          <div className='two-cols'>
+            <label className='field'>
               <span>Valor da diária (MEI/Freelancer)</span>
               <input
-                type="number"
-                step="0.01"
+                type='number'
+                step='0.01'
                 min={0}
                 value={form.valor_diaria}
                 disabled={diariaDisabled}
@@ -1461,17 +1639,19 @@ function ProfissionaisPage() {
                   setForm((prev) => ({
                     ...prev,
                     valor_diaria: event.target.value,
-                    valor_salario_mensal: event.target.value ? '' : prev.valor_salario_mensal,
+                    valor_salario_mensal: event.target.value
+                      ? ''
+                      : prev.valor_salario_mensal,
                   }))
                 }
-                placeholder="0,00"
+                placeholder='0,00'
               />
             </label>
-            <label className="field">
+            <label className='field'>
               <span>Salário mensal (Estagiária)</span>
               <input
-                type="number"
-                step="0.01"
+                type='number'
+                step='0.01'
                 min={0}
                 value={form.valor_salario_mensal}
                 disabled={salarioDisabled}
@@ -1482,98 +1662,114 @@ function ProfissionaisPage() {
                     valor_diaria: event.target.value ? '' : prev.valor_diaria,
                   }))
                 }
-                placeholder="0,00"
+                placeholder='0,00'
               />
             </label>
           </div>
-          <div className="two-cols">
-            <label className="field">
+          <div className='two-cols'>
+            <label className='field'>
               <span>Comissão de sábado</span>
               <input
-                type="number"
-                step="0.01"
+                type='number'
+                step='0.01'
                 min={0}
                 value={form.comissao_sabado}
-                onChange={(event) => setForm({ ...form, comissao_sabado: event.target.value })}
-                placeholder="Ex.: 50,00"
+                onChange={(event) =>
+                  setForm({ ...form, comissao_sabado: event.target.value })
+                }
+                placeholder='Ex.: 50,00'
               />
             </label>
           </div>
-          <div className="two-cols">
-            <label className="field">
+          <div className='two-cols'>
+            <label className='field'>
               <span>CPF</span>
               <input
                 value={form.cpf}
-                onChange={(event) => setForm({ ...form, cpf: event.target.value })}
-                placeholder="000.000.000-00"
+                onChange={(event) =>
+                  setForm({ ...form, cpf: event.target.value })
+                }
+                placeholder='000.000.000-00'
               />
             </label>
-            <label className="field">
+            <label className='field'>
               <span>CNPJ (MEI/Freelancer)</span>
               <input
                 value={form.cnpj}
                 disabled={!isMeiOuFreelancer}
-                onChange={(event) => setForm({ ...form, cnpj: event.target.value })}
-                placeholder="00.000.000/0000-00"
+                onChange={(event) =>
+                  setForm({ ...form, cnpj: event.target.value })
+                }
+                placeholder='00.000.000/0000-00'
               />
             </label>
           </div>
-          <div className="two-cols">
-            <label className="field">
+          <div className='two-cols'>
+            <label className='field'>
               <span>Celular (+55...)</span>
               <input
-                type="tel"
+                type='tel'
                 value={form.celular}
-                onChange={(event) => setForm({ ...form, celular: event.target.value })}
-                placeholder="+5511987654321"
+                onChange={(event) =>
+                  setForm({ ...form, celular: event.target.value })
+                }
+                placeholder='+5511987654321'
               />
             </label>
-            <label className="field">
+            <label className='field'>
               <span>Data do contrato</span>
               <input
-                type="date"
+                type='date'
                 value={form.data_contrato}
-                onChange={(event) => setForm({ ...form, data_contrato: event.target.value })}
+                onChange={(event) =>
+                  setForm({ ...form, data_contrato: event.target.value })
+                }
               />
             </label>
           </div>
-          <div className="two-cols">
-            <label className="field">
+          <div className='two-cols'>
+            <label className='field'>
               <span>Banco</span>
               <input
                 value={form.banco_nome}
-                onChange={(event) => setForm({ ...form, banco_nome: event.target.value })}
-                placeholder="Banco/Instituição"
+                onChange={(event) =>
+                  setForm({ ...form, banco_nome: event.target.value })
+                }
+                placeholder='Banco/Instituição'
               />
             </label>
-            <div className="two-cols tight-gap">
-              <label className="field">
+            <div className='two-cols tight-gap'>
+              <label className='field'>
                 <span>Agência</span>
                 <input
                   value={form.banco_agencia}
-                  onChange={(event) => setForm({ ...form, banco_agencia: event.target.value })}
-                  placeholder="0000-0"
+                  onChange={(event) =>
+                    setForm({ ...form, banco_agencia: event.target.value })
+                  }
+                  placeholder='0000-0'
                 />
               </label>
-              <label className="field">
+              <label className='field'>
                 <span>Conta</span>
                 <input
                   value={form.banco_conta}
-                  onChange={(event) => setForm({ ...form, banco_conta: event.target.value })}
-                  placeholder="000000-0"
+                  onChange={(event) =>
+                    setForm({ ...form, banco_conta: event.target.value })
+                  }
+                  placeholder='000000-0'
                 />
               </label>
             </div>
           </div>
-          <label className="field">
+          <label className='field'>
             <span>
               Link para contrato (Drive)
               {contratoLink ? (
                 <a
-                  className="pill pill-soft inline-pill"
+                  className='pill pill-soft inline-pill'
                   href={contratoLink}
-                  target="_blank"
-                  rel="noreferrer"
+                  target='_blank'
+                  rel='noreferrer'
                 >
                   Ver PDF
                 </a>
@@ -1581,72 +1777,86 @@ function ProfissionaisPage() {
             </span>
             <input
               value={form.link_contrato}
-              onChange={(event) => setForm({ ...form, link_contrato: event.target.value })}
-              placeholder="https://drive.google.com/..."
+              onChange={(event) =>
+                setForm({ ...form, link_contrato: event.target.value })
+              }
+              placeholder='https://drive.google.com/...'
             />
           </label>
-          <div className="two-cols">
-            <label className="field">
+          <div className='two-cols'>
+            <label className='field'>
               <span>Nome empresarial (MEI/Freelancer)</span>
               <input
                 value={form.nome_empresarial}
                 disabled={!isMeiOuFreelancer}
-                onChange={(event) => setForm({ ...form, nome_empresarial: event.target.value })}
-                placeholder="Razão social"
+                onChange={(event) =>
+                  setForm({ ...form, nome_empresarial: event.target.value })
+                }
+                placeholder='Razão social'
               />
             </label>
-            <label className="field">
+            <label className='field'>
               <span>Endereço da empresa (MEI/Freelancer)</span>
               <input
                 value={form.endereco_empresa}
                 disabled={!isMeiOuFreelancer}
-                onChange={(event) => setForm({ ...form, endereco_empresa: event.target.value })}
-                placeholder="Rua, número, bairro"
+                onChange={(event) =>
+                  setForm({ ...form, endereco_empresa: event.target.value })
+                }
+                placeholder='Rua, número, bairro'
               />
             </label>
           </div>
-          <div className="two-cols">
-            <label className="field">
+          <div className='two-cols'>
+            <label className='field'>
               <span>CNAE</span>
               <input
                 value={form.cnae}
                 disabled={!isMeiOuFreelancer}
-                onChange={(event) => setForm({ ...form, cnae: event.target.value })}
-                placeholder="0000-0/00"
+                onChange={(event) =>
+                  setForm({ ...form, cnae: event.target.value })
+                }
+                placeholder='0000-0/00'
               />
             </label>
-            <label className="field">
+            <label className='field'>
               <span>Inscrição Municipal</span>
               <input
                 value={form.inscricao_municipal}
                 disabled={!isMeiOuFreelancer}
-                onChange={(event) => setForm({ ...form, inscricao_municipal: event.target.value })}
-                placeholder="Opcional"
+                onChange={(event) =>
+                  setForm({ ...form, inscricao_municipal: event.target.value })
+                }
+                placeholder='Opcional'
               />
             </label>
           </div>
-          <label className="field">
+          <label className='field'>
             <span>Vale transporte (estagiária)</span>
             <input
-              type="number"
-              step="0.01"
+              type='number'
+              step='0.01'
               min={0}
               value={form.valor_vale_transporte}
               disabled={!isEstagiaria}
-              onChange={(event) => setForm({ ...form, valor_vale_transporte: event.target.value })}
-              placeholder="0,00"
+              onChange={(event) =>
+                setForm({ ...form, valor_vale_transporte: event.target.value })
+              }
+              placeholder='0,00'
             />
           </label>
-          <label className="field">
+          <label className='field'>
             <span>Tags</span>
             <input
               value={form.tags}
-              onChange={(event) => setForm({ ...form, tags: event.target.value })}
-              placeholder="treinador, júnior, sábado"
+              onChange={(event) =>
+                setForm({ ...form, tags: event.target.value })
+              }
+              placeholder='treinador, júnior, sábado'
             />
           </label>
-          <div className="two-cols">
-            <label className="field">
+          <div className='two-cols'>
+            <label className='field'>
               <span>Locais preferidos</span>
               <select
                 multiple
@@ -1654,7 +1864,9 @@ function ProfissionaisPage() {
                 onChange={(event) =>
                   setForm({
                     ...form,
-                    locais_preferidos: handleMultiSelect(event.currentTarget.options),
+                    locais_preferidos: handleMultiSelect(
+                      event.currentTarget.options,
+                    ),
                   })
                 }
               >
@@ -1665,7 +1877,7 @@ function ProfissionaisPage() {
                 ))}
               </select>
             </label>
-            <label className="field">
+            <label className='field'>
               <span>Locais proibidos</span>
               <select
                 multiple
@@ -1673,7 +1885,9 @@ function ProfissionaisPage() {
                 onChange={(event) =>
                   setForm({
                     ...form,
-                    locais_proibidos: handleMultiSelect(event.currentTarget.options),
+                    locais_proibidos: handleMultiSelect(
+                      event.currentTarget.options,
+                    ),
                   })
                 }
               >
@@ -1685,11 +1899,15 @@ function ProfissionaisPage() {
               </select>
             </label>
           </div>
-          <div className="account-actions">
-            <button className="primary-button" type="submit">
+          <div className='account-actions'>
+            <button className='primary-button' type='submit'>
               Salvar profissional
             </button>
-            <button className="ghost-button" type="button" onClick={() => setShowModal(false)}>
+            <button
+              className='ghost-button'
+              type='button'
+              onClick={() => setShowModal(false)}
+            >
               Cancelar
             </button>
           </div>
@@ -1710,6 +1928,7 @@ function LocaisPage() {
     nome: '',
     area: '',
     endereco: '',
+    observacao: '',
     prioridade_cobertura: 1,
   });
   const [salaForm, setSalaForm] = useState({ local: 0, nome: '' });
@@ -1739,10 +1958,16 @@ function LocaisPage() {
       setCapacidades(capacidadesData);
       setExpandedLocais(new Set(locaisData.map((item) => item.id)));
       if (locaisData.length) {
-        setSalaForm((prev) => ({ ...prev, local: prev.local || locaisData[0].id }));
+        setSalaForm((prev) => ({
+          ...prev,
+          local: prev.local || locaisData[0].id,
+        }));
       }
     } catch (exception) {
-      const message = exception instanceof Error ? exception.message : 'Erro ao carregar locais.';
+      const message =
+        exception instanceof Error
+          ? exception.message
+          : 'Erro ao carregar locais.';
       setError(message);
     } finally {
       setLoading(false);
@@ -1760,7 +1985,9 @@ function LocaisPage() {
     try {
       if (editingLocal) {
         const updated = await updateLocal(editingLocal.id, localForm);
-        setLocais((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
+        setLocais((prev) =>
+          prev.map((item) => (item.id === updated.id ? updated : item)),
+        );
         setSuccess('Local atualizado.');
         setEditingLocal(null);
       } else {
@@ -1773,10 +2000,19 @@ function LocaisPage() {
         });
         setSuccess('Local cadastrado.');
       }
-      setLocalForm({ nome: '', area: '', endereco: '', prioridade_cobertura: 1 });
+      setLocalForm({
+        nome: '',
+        area: '',
+        endereco: '',
+        observacao: '',
+        prioridade_cobertura: 1,
+      });
       setShowLocalModal(false);
     } catch (exception) {
-      const message = exception instanceof Error ? exception.message : 'Erro ao cadastrar local.';
+      const message =
+        exception instanceof Error
+          ? exception.message
+          : 'Erro ao cadastrar local.';
       setError(message);
     }
   };
@@ -1791,7 +2027,9 @@ function LocaisPage() {
     try {
       if (editingSala) {
         const updated = await updateSala(editingSala.id, salaForm);
-        setSalas((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
+        setSalas((prev) =>
+          prev.map((item) => (item.id === updated.id ? updated : item)),
+        );
         setEditingSala(null);
         setSuccess('Sala atualizada.');
       } else {
@@ -1821,7 +2059,10 @@ function LocaisPage() {
       setSalaForm((prev) => ({ ...prev, nome: '' }));
       setShowSalaModal(false);
     } catch (exception) {
-      const message = exception instanceof Error ? exception.message : 'Erro ao cadastrar sala.';
+      const message =
+        exception instanceof Error
+          ? exception.message
+          : 'Erro ao cadastrar sala.';
       setError(message);
     }
   };
@@ -1847,6 +2088,7 @@ function LocaisPage() {
             if (existing) {
               operations.push(
                 updateCapacidadeSala(existing.id, {
+                  ...existing,
                   capacidade: value,
                   data_especial: null,
                 }),
@@ -1873,10 +2115,19 @@ function LocaisPage() {
       setCapacidades(capacidadesAtualizadas);
       setSuccess('Capacidade registrada para a sala selecionada.');
       setShowCapModal(false);
-      setCapacityGrid(diasSemana.map((dia) => ({ dia_semana: dia.value, manha: '', tarde: '' })));
+      setCapacityGrid(
+        diasSemana.map((dia) => ({
+          dia_semana: dia.value,
+          manha: '',
+          tarde: '',
+        })),
+      );
       setCapTargetSala(null);
     } catch (exception) {
-      const message = exception instanceof Error ? exception.message : 'Erro ao salvar capacidade.';
+      const message =
+        exception instanceof Error
+          ? exception.message
+          : 'Erro ao salvar capacidade.';
       setError(message);
     }
   };
@@ -1884,7 +2135,9 @@ function LocaisPage() {
   const salasPorLocal = useMemo(() => {
     const mapping: Record<number, Sala[]> = {};
     salas.forEach((sala) => {
-      mapping[sala.local] = mapping[sala.local] ? [...mapping[sala.local], sala] : [sala];
+      mapping[sala.local] = mapping[sala.local]
+        ? [...mapping[sala.local], sala]
+        : [sala];
     });
     return mapping;
   }, [salas]);
@@ -1905,7 +2158,9 @@ function LocaisPage() {
       capacityGrid.reduce((total, row) => {
         const manha = Number.parseInt(row.manha, 10);
         const tarde = Number.parseInt(row.tarde, 10);
-        const valores = [manha, tarde].filter((value) => Number.isFinite(value) && value > 0);
+        const valores = [manha, tarde].filter(
+          (value) => Number.isFinite(value) && value > 0,
+        );
         return total + valores.reduce((acc, value) => acc + value, 0);
       }, 0),
     [capacityGrid],
@@ -1939,116 +2194,158 @@ function LocaisPage() {
   };
 
   const clearCapacityGrid = () => {
-    setCapacityGrid(diasSemana.map((dia) => ({ dia_semana: dia.value, manha: '', tarde: '' })));
+    setCapacityGrid(
+      diasSemana.map((dia) => ({
+        dia_semana: dia.value,
+        manha: '',
+        tarde: '',
+      })),
+    );
   };
 
   const resumoGlobal = useMemo(() => {
-    const totalPorDia = diasSemana.map((dia) =>
-      capacidades
-        .filter((cap) => cap.dia_semana === dia.value)
-        .reduce((total, cap) => total + (cap.capacidade || 0), 0),
+    const totalPorDia = diasSemana.map((dia) => {
+      const capsDia = capacidades.filter((cap) => cap.dia_semana === dia.value);
+      const manha = capsDia
+        .filter((cap) => cap.turno === 'manha')
+        .reduce((total, cap) => total + (cap.capacidade || 0), 0);
+      const tarde = capsDia
+        .filter((cap) => cap.turno === 'tarde')
+        .reduce((total, cap) => total + (cap.capacidade || 0), 0);
+      return { dia: dia.value, manha, tarde };
+    });
+    const totalSemanal = totalPorDia.reduce(
+      (acc, value) => acc + value.manha + value.tarde,
+      0,
     );
-    const totalSemanal = totalPorDia.reduce((acc, value) => acc + value, 0);
     return { totalPorDia, totalSemanal };
   }, [capacidades]);
 
   return (
-    <section className="panel">
-      <div className="panel-header">
+    <section className='panel'>
+      <div className='panel-header'>
         <div>
-          <p className="eyebrow">Cadastros</p>
+          <p className='eyebrow'>Cadastros</p>
           <h2>Locais e salas</h2>
-          <p className="lede">Tabela de locais. Cadastre locais, salas e capacidades via modais.</p>
+          <p className='lede'>
+            Tabela de locais. Cadastre locais, salas e capacidades via modais.
+          </p>
         </div>
-        <div className="panel-actions">
+        <div className='panel-actions'>
           <button
-            className="primary-button"
-            type="button"
+            className='primary-button'
+            type='button'
             onClick={() => {
               setEditingLocal(null);
-              setLocalForm({ nome: '', area: '', endereco: '', prioridade_cobertura: 1 });
+              setLocalForm({
+                nome: '',
+                area: '',
+                endereco: '',
+                observacao: '',
+                prioridade_cobertura: 1,
+              });
               setShowLocalModal(true);
             }}
           >
             + Local
           </button>
-          <button className="ghost-button small" type="button" onClick={() => setShowHelp(true)}>
+          <button
+            className='ghost-button small'
+            type='button'
+            onClick={() => setShowHelp(true)}
+          >
             ?
           </button>
         </div>
       </div>
-      {error ? <div className="alert">{error}</div> : null}
-      {success ? <div className="success">{success}</div> : null}
-      <div className="global-summary">
-        <p className="muted small-print">Resumo geral (todos os locais)</p>
-        <div className="global-summary-row">
-          <div className="dia-summary">
+      {error ? <div className='alert'>{error}</div> : null}
+      {success ? <div className='success'>{success}</div> : null}
+      <div className='global-summary'>
+        <p className='muted small-print'>Resumo geral (todos os locais)</p>
+        <div className='global-summary-row'>
+          <div className='dia-summary'>
             {diasSemana.map((dia, index) => (
               <span
                 key={`global-${dia.value}`}
-                className="day-chip day-chip--global"
+                className='day-chip day-chip--global'
                 data-day={dia.value}
               >
-                <span className="day-icon day-icon--large" data-day={dia.value} />
-                <span className="day-label">{dia.label}</span>
+                <span
+                  className='day-icon day-icon--large'
+                  data-day={dia.value}
+                />
+                <span className='day-label'>{dia.label}</span>
                 <span
                   className={`day-badge${
-                    resumoGlobal.totalPorDia[index] === 0 ? ' badge-empty' : ''
+                    resumoGlobal.totalPorDia[index].manha === 0 &&
+                    resumoGlobal.totalPorDia[index].tarde === 0
+                      ? ' badge-empty'
+                      : ''
                   }`}
                 >
-                  {resumoGlobal.totalPorDia[index]}
+                  {resumoGlobal.totalPorDia[index].manha}/
+                  {resumoGlobal.totalPorDia[index].tarde}
                 </span>
               </span>
             ))}
           </div>
-          <span className="metric-pill metric-pill--right">
-            <span className="pill-title">Turnos/semana</span>
-            <span className="day-badge">{resumoGlobal.totalSemanal}</span>
+          <span className='metric-pill metric-pill--right'>
+            <span className='pill-title'>Turnos/semana</span>
+            <span className='day-badge'>{resumoGlobal.totalSemanal}</span>
           </span>
         </div>
       </div>
       {loading ? (
-        <p className="muted">Carregando locais...</p>
+        <p className='muted'>Carregando locais...</p>
       ) : (
-        <div className="local-list">
+        <div className='local-list'>
           {locais.map((local) => {
             const salasDoLocal = salasPorLocal[local.id] || [];
             const totalLocal = capacidades
-              .filter((cap) => salasDoLocal.some((sala) => sala.id === cap.sala))
+              .filter((cap) =>
+                salasDoLocal.some((sala) => sala.id === cap.sala),
+              )
               .reduce((total, cap) => total + (cap.capacidade || 0), 0);
             return (
-              <article key={local.id} className="local-card">
-                <div className="local-head">
+              <article key={local.id} className='local-card'>
+                <div className='local-head'>
                   <div>
-                    <p className="eyebrow">Local</p>
+                    <p className='eyebrow'>Local</p>
                     <h3>{local.nome}</h3>
-                    <p className="muted small-print">
-                      {local.area || 'Área não informada'} · Prioridade {local.prioridade_cobertura}
+                    <p className='muted small-print'>
+                      {local.area || 'Área não informada'} · Prioridade{' '}
+                      {local.prioridade_cobertura}
                     </p>
-                    <p className="muted small-print">
+                    <p className='muted small-print'>
                       {local.endereco || 'Endereço não informado'}
                     </p>
+                    {local.observacao ? (
+                      <p className='muted small-print'>
+                        Obs.: {local.observacao}
+                      </p>
+                    ) : null}
                   </div>
-                  <div className="local-total">
-                    <div className="metric-pill">
-                      <span className="pill-title">Salas</span>
-                      <span className="day-badge">{salasDoLocal.length}</span>
+                  <div className='local-total'>
+                    <div className='metric-pill'>
+                      <span className='pill-title'>Salas</span>
+                      <span className='day-badge'>{salasDoLocal.length}</span>
                     </div>
-                    <div className="metric-pill">
-                      <span className="pill-title">Turnos/semana</span>
-                      <span className="day-badge">{totalLocal}</span>
+                    <div className='metric-pill'>
+                      <span className='pill-title'>Turnos/semana</span>
+                      <span className='day-badge'>{totalLocal}</span>
                     </div>
                   </div>
-                  <div className="local-actions">
+                  <div className='local-actions'>
                     <button
-                      className="ghost-button small soft"
-                      type="button"
+                      className='ghost-button small soft'
+                      type='button'
                       onClick={() => {
                         setEditingLocal(local);
                         setLocalForm({
                           nome: local.nome,
                           area: local.area,
                           endereco: local.endereco,
+                          observacao: local.observacao,
                           prioridade_cobertura: local.prioridade_cobertura,
                         });
                         setShowLocalModal(true);
@@ -2057,8 +2354,8 @@ function LocaisPage() {
                       ✏️ Editar local
                     </button>
                     <button
-                      className="ghost-button small danger filled"
-                      type="button"
+                      className='ghost-button small danger filled'
+                      type='button'
                       onClick={async () => {
                         if (
                           window.confirm(
@@ -2070,11 +2367,18 @@ function LocaisPage() {
                               (sala) => sala.local === local.id,
                             );
                             await deleteLocal(local.id);
-                            setLocais((prev) => prev.filter((item) => item.id !== local.id));
-                            setSalas((prev) => prev.filter((sala) => sala.local !== local.id));
+                            setLocais((prev) =>
+                              prev.filter((item) => item.id !== local.id),
+                            );
+                            setSalas((prev) =>
+                              prev.filter((sala) => sala.local !== local.id),
+                            );
                             setCapacidades((prev) =>
                               prev.filter(
-                                (cap) => !salasDoLocalToRemove.some((sala) => sala.id === cap.sala),
+                                (cap) =>
+                                  !salasDoLocalToRemove.some(
+                                    (sala) => sala.id === cap.sala,
+                                  ),
                               ),
                             );
                             setSuccess('Local removido.');
@@ -2092,10 +2396,10 @@ function LocaisPage() {
                     </button>
                   </div>
                 </div>
-                <div className="local-body">
-                  <div className="sala-list">
-                    <div className="sala-list__header">
-                      <div className="dia-summary local-summary">
+                <div className='local-body'>
+                  <div className='sala-list'>
+                    <div className='sala-list__header'>
+                      <div className='dia-summary local-summary'>
                         {diasSemana.map((dia) => {
                           const totalDiaLocal = capacidades
                             .filter(
@@ -2104,15 +2408,18 @@ function LocaisPage() {
                                   (sala) => sala.id === cap.sala,
                                 ) && cap.dia_semana === dia.value,
                             )
-                            .reduce((total, cap) => total + (cap.capacidade || 0), 0);
+                            .reduce(
+                              (total, cap) => total + (cap.capacidade || 0),
+                              0,
+                            );
                           return (
                             <span
                               key={`local-${local.id}-${dia.value}`}
-                              className="day-chip day-chip--local"
+                              className='day-chip day-chip--local'
                               data-day={dia.value}
                             >
-                              <span className="day-dot" data-day={dia.value} />
-                              <span className="day-label">{dia.label}</span>
+                              <span className='day-dot' data-day={dia.value} />
+                              <span className='day-label'>{dia.label}</span>
                               <span
                                 className={`day-badge${totalDiaLocal === 0 ? ' badge-empty' : ''}`}
                               >
@@ -2122,31 +2429,41 @@ function LocaisPage() {
                           );
                         })}
                       </div>
-                      <div className="sala-list__actions">
+                      <div className='sala-list__actions'>
                         <button
-                          className="ghost-button small soft"
-                          type="button"
+                          className='ghost-button small soft'
+                          type='button'
                           onClick={() => {
                             const salasDoLocal = salasPorLocal[local.id] || [];
                             const numeros = salasDoLocal
-                              .map((sala) => Number.parseInt(sala.nome.replace(/\D/g, ''), 10))
+                              .map((sala) =>
+                                Number.parseInt(
+                                  sala.nome.replace(/\D/g, ''),
+                                  10,
+                                ),
+                              )
                               .filter((n) => Number.isFinite(n));
                             const nextNumber =
                               numeros.length > 0
                                 ? Math.max(...numeros) + 1
                                 : salasDoLocal.length + 1;
-                            setSalaForm({ local: local.id, nome: `Sala ${nextNumber}` });
+                            setSalaForm({
+                              local: local.id,
+                              nome: `Sala ${nextNumber}`,
+                            });
                             setEditingSala(null);
                             setShowSalaModal(true);
-                            setExpandedLocais((prev) => new Set(prev).add(local.id));
+                            setExpandedLocais((prev) =>
+                              new Set(prev).add(local.id),
+                            );
                           }}
                         >
                           ➕ Adicionar sala
                         </button>
                         {salasDoLocal.length ? (
                           <button
-                            className="ghost-button small soft"
-                            type="button"
+                            className='ghost-button small soft'
+                            type='button'
                             onClick={() =>
                               setExpandedLocais((prev) => {
                                 const next = new Set(prev);
@@ -2159,7 +2476,9 @@ function LocaisPage() {
                               })
                             }
                           >
-                            {expandedLocais.has(local.id) ? '⬆️ Ocultar salas' : '⬇️ Mostrar salas'}
+                            {expandedLocais.has(local.id)
+                              ? '⬆️ Ocultar salas'
+                              : '⬇️ Mostrar salas'}
                           </button>
                         ) : null}
                       </div>
@@ -2168,25 +2487,42 @@ function LocaisPage() {
                       ? salasDoLocal.map((sala) => {
                           const resumoDias = diasSemana.map((dia) => {
                             const totalDia = capacidades
-                              .filter((cap) => cap.sala === sala.id && cap.dia_semana === dia.value)
-                              .reduce((total, cap) => total + (cap.capacidade || 0), 0);
-                            return { label: dia.label, total: totalDia, value: dia.value };
+                              .filter(
+                                (cap) =>
+                                  cap.sala === sala.id &&
+                                  cap.dia_semana === dia.value,
+                              )
+                              .reduce(
+                                (total, cap) => total + (cap.capacidade || 0),
+                                0,
+                              );
+                            return {
+                              label: dia.label,
+                              total: totalDia,
+                              value: dia.value,
+                            };
                           });
 
                           return (
-                            <div key={sala.id} className="sala-item">
+                            <div key={sala.id} className='sala-item'>
                               <div>
-                                <strong>{getSalaLabel(sala, locaisById)}</strong>
-                                <div className="dia-summary">
+                                <strong>
+                                  {getSalaLabel(sala, locaisById)}
+                                </strong>
+                                <div className='dia-summary'>
                                   {resumoDias.map((dia) => (
                                     <span
                                       key={`${sala.id}-${dia.value}`}
                                       className={`day-chip day-chip--sala${
-                                        dia.total === 0 ? ' day-chip--empty' : ''
+                                        dia.total === 0
+                                          ? ' day-chip--empty'
+                                          : ''
                                       }`}
                                       data-day={dia.value}
                                     >
-                                      <span className="day-label">{dia.label}</span>
+                                      <span className='day-label'>
+                                        {dia.label}
+                                      </span>
                                       <span
                                         className={`day-badge${dia.total === 0 ? ' badge-empty' : ''}`}
                                       >
@@ -2196,21 +2532,24 @@ function LocaisPage() {
                                   ))}
                                 </div>
                               </div>
-                              <div className="sala-actions">
+                              <div className='sala-actions'>
                                 <button
-                                  className="ghost-button small soft"
-                                  type="button"
+                                  className='ghost-button small soft'
+                                  type='button'
                                   onClick={() => {
                                     setEditingSala(sala);
-                                    setSalaForm({ local: sala.local, nome: sala.nome });
+                                    setSalaForm({
+                                      local: sala.local,
+                                      nome: sala.nome,
+                                    });
                                     setShowSalaModal(true);
                                   }}
                                 >
                                   ✏️ Editar
                                 </button>
                                 <button
-                                  className="ghost-button small soft"
-                                  type="button"
+                                  className='ghost-button small soft'
+                                  type='button'
                                   onClick={async () => {
                                     if (
                                       window.confirm(
@@ -2220,10 +2559,14 @@ function LocaisPage() {
                                       try {
                                         await deleteSala(sala.id);
                                         setSalas((prev) =>
-                                          prev.filter((item) => item.id !== sala.id),
+                                          prev.filter(
+                                            (item) => item.id !== sala.id,
+                                          ),
                                         );
                                         setCapacidades((prev) =>
-                                          prev.filter((cap) => cap.sala !== sala.id),
+                                          prev.filter(
+                                            (cap) => cap.sala !== sala.id,
+                                          ),
                                         );
                                         setSuccess('Sala removida.');
                                       } catch (exception) {
@@ -2239,8 +2582,8 @@ function LocaisPage() {
                                   🗑️ Remover
                                 </button>
                                 <button
-                                  className="ghost-button small primary-ghost"
-                                  type="button"
+                                  className='ghost-button small primary-ghost'
+                                  type='button'
                                   onClick={() => {
                                     setCapTargetSala(sala);
                                     setShowCapModal(true);
@@ -2261,10 +2604,14 @@ function LocaisPage() {
                                         return {
                                           dia_semana: dia.value,
                                           manha: manhaExistente
-                                            ? String(manhaExistente.capacidade ?? '')
+                                            ? String(
+                                                manhaExistente.capacidade ?? '',
+                                              )
                                             : '',
                                           tarde: tardeExistente
-                                            ? String(tardeExistente.capacidade ?? '')
+                                            ? String(
+                                                tardeExistente.capacidade ?? '',
+                                              )
                                             : '',
                                         };
                                       }),
@@ -2283,32 +2630,38 @@ function LocaisPage() {
               </article>
             );
           })}
-          {!locais.length ? <p className="muted">Nenhum local cadastrado.</p> : null}
+          {!locais.length ? (
+            <p className='muted'>Nenhum local cadastrado.</p>
+          ) : null}
         </div>
       )}
 
       <Modal
         open={showHelp}
         onClose={() => setShowHelp(false)}
-        title="Como cadastrar locais e salas"
-        description="Passos para montar a infraestrutura de escala."
+        title='Como cadastrar locais e salas'
+        description='Passos para montar a infraestrutura de escala.'
       >
-        <ul className="help-list">
+        <ul className='help-list'>
           <li>
-            Local é a clínica/unidade (ex.: Savassi, Lourdes). Informe área/região e prioridade.
+            Local é a clínica/unidade (ex.: Savassi, Lourdes). Informe
+            área/região e prioridade.
           </li>
           <li>
-            Sala é um espaço físico dentro do local; cada sala recebe uma profissional por turno.
+            Sala é um espaço físico dentro do local; cada sala recebe uma
+            profissional por turno.
           </li>
           <li>
-            Capacidade por dia/turno define quando a sala opera (geralmente 1). Marque
-            disponibilidade.
+            Capacidade por dia/turno define quando a sala opera (geralmente 1).
+            Marque disponibilidade.
           </li>
           <li>
-            Data especial na capacidade cobre exceções (feriados, manutenções, reforços pontuais).
+            Data especial na capacidade cobre exceções (feriados, manutenções,
+            reforços pontuais).
           </li>
           <li>
-            Esses cadastros alimentam a geração de escala e a detecção de gaps por local/turno.
+            Esses cadastros alimentam a geração de escala e a detecção de gaps
+            por local/turno.
           </li>
         </ul>
       </Modal>
@@ -2320,50 +2673,74 @@ function LocaisPage() {
           setEditingLocal(null);
         }}
         title={editingLocal ? 'Editar local' : 'Cadastrar local'}
-        description="Inclua nome, área/região e prioridade de cobertura."
+        description='Inclua nome, área/região, prioridade de cobertura e observações.'
       >
-        <form className="account-form" onSubmit={handleLocalSubmit}>
-          <label className="field">
+        <form className='account-form' onSubmit={handleLocalSubmit}>
+          <label className='field'>
             <span>Nome</span>
             <input
               required
               value={localForm.nome}
-              onChange={(event) => setLocalForm({ ...localForm, nome: event.target.value })}
-              placeholder="Savassi, Lourdes..."
+              onChange={(event) =>
+                setLocalForm({ ...localForm, nome: event.target.value })
+              }
+              placeholder='Savassi, Lourdes...'
             />
           </label>
-          <div className="two-cols">
-            <label className="field">
+          <div className='two-cols'>
+            <label className='field'>
               <span>Área/Região</span>
               <input
                 value={localForm.area}
-                onChange={(event) => setLocalForm({ ...localForm, area: event.target.value })}
+                onChange={(event) =>
+                  setLocalForm({ ...localForm, area: event.target.value })
+                }
               />
             </label>
-            <label className="field">
+            <label className='field'>
               <span>Prioridade de cobertura</span>
               <input
-                type="number"
+                type='number'
                 min={1}
                 value={localForm.prioridade_cobertura}
                 onChange={(event) =>
-                  setLocalForm({ ...localForm, prioridade_cobertura: Number(event.target.value) })
+                  setLocalForm({
+                    ...localForm,
+                    prioridade_cobertura: Number(event.target.value),
+                  })
                 }
               />
             </label>
           </div>
-          <label className="field">
+          <label className='field'>
             <span>Endereço</span>
             <input
               value={localForm.endereco}
-              onChange={(event) => setLocalForm({ ...localForm, endereco: event.target.value })}
+              onChange={(event) =>
+                setLocalForm({ ...localForm, endereco: event.target.value })
+              }
             />
           </label>
-          <div className="account-actions">
-            <button className="primary-button" type="submit">
+          <label className='field'>
+            <span>Observação</span>
+            <textarea
+              rows={3}
+              value={localForm.observacao}
+              onChange={(event) =>
+                setLocalForm({ ...localForm, observacao: event.target.value })
+              }
+              placeholder='Notas internas ou restrições específicas deste local.'
+            />
+          </label>
+          <div className='account-actions'>
+            <button className='primary-button' type='submit'>
               Salvar local
             </button>
-            <button className="ghost-button" type="button" onClick={() => setShowLocalModal(false)}>
+            <button
+              className='ghost-button'
+              type='button'
+              onClick={() => setShowLocalModal(false)}
+            >
               Cancelar
             </button>
           </div>
@@ -2377,16 +2754,19 @@ function LocaisPage() {
           setEditingSala(null);
         }}
         title={editingSala ? 'Editar sala' : 'Cadastrar sala'}
-        description="Salas novas recebem capacidade padrão (Seg-Sex, manhã e tarde)."
+        description='Salas novas recebem capacidade padrão (Seg-Sex, manhã e tarde).'
       >
-        <form className="account-form" onSubmit={handleSalaSubmit}>
-          <div className="two-cols">
-            <label className="field">
+        <form className='account-form' onSubmit={handleSalaSubmit}>
+          <div className='two-cols'>
+            <label className='field'>
               <span>Local</span>
               <select
                 value={salaForm.local}
                 onChange={(event) =>
-                  setSalaForm({ ...salaForm, local: Number(event.target.value) })
+                  setSalaForm({
+                    ...salaForm,
+                    local: Number(event.target.value),
+                  })
                 }
               >
                 {locais.map((local) => (
@@ -2396,23 +2776,25 @@ function LocaisPage() {
                 ))}
               </select>
             </label>
-            <label className="field">
+            <label className='field'>
               <span>Nome da sala</span>
               <input
                 required
                 value={salaForm.nome}
-                onChange={(event) => setSalaForm({ ...salaForm, nome: event.target.value })}
-                placeholder="Sala 1"
+                onChange={(event) =>
+                  setSalaForm({ ...salaForm, nome: event.target.value })
+                }
+                placeholder='Sala 1'
               />
             </label>
           </div>
-          <div className="account-actions">
-            <button className="primary-button" type="submit">
+          <div className='account-actions'>
+            <button className='primary-button' type='submit'>
               {editingSala ? 'Salvar sala' : 'Adicionar sala'}
             </button>
             <button
-              className="ghost-button"
-              type="button"
+              className='ghost-button'
+              type='button'
               onClick={() => {
                 setShowSalaModal(false);
                 setEditingSala(null);
@@ -2430,70 +2812,82 @@ function LocaisPage() {
           setShowCapModal(false);
           setCapTargetSala(null);
         }}
-        title="Capacidade por dia/turno"
-        description="Marque a disponibilidade da sala em cada turno."
+        title='Capacidade por dia/turno'
+        description='Marque a disponibilidade da sala em cada turno.'
       >
-        <form className="account-form" onSubmit={handleCapSubmit}>
-          <div className="capacity-headline">
-            <div className="capacity-summary">
-              <p className="muted small-print">Sala selecionada</p>
+        <form className='account-form' onSubmit={handleCapSubmit}>
+          <div className='capacity-headline'>
+            <div className='capacity-summary'>
+              <p className='muted small-print'>Sala selecionada</p>
               <strong>
-                {selectedSala ? getSalaLabel(selectedSala, locaisById) : 'Nenhuma sala'}
+                {selectedSala
+                  ? getSalaLabel(selectedSala, locaisById)
+                  : 'Nenhuma sala'}
               </strong>
-              <span className="muted">
+              <span className='muted'>
                 {selectedLocal
                   ? `${selectedLocal.nome} · ${selectedLocal.area || 'Sem área definida'}`
                   : 'Escolha uma sala para ver o local'}
               </span>
             </div>
             {selectedSala ? (
-              <div className="capacity-stats-card">
-                <p className="muted small-print">Resumo rápido</p>
-                <div className="capacity-stats">
+              <div className='capacity-stats-card'>
+                <p className='muted small-print'>Resumo rápido</p>
+                <div className='capacity-stats'>
                   <span
                     className={`pill-soft${
-                      capacidadeSemana !== capacidadeSalvaSemana ? ' pill-warn' : ''
+                      capacidadeSemana !== capacidadeSalvaSemana
+                        ? ' pill-warn'
+                        : ''
                     }`}
                   >
                     Preenchido: {capacidadeSemana} turnos
                   </span>
-                  <span className="pill-soft">Salvo: {capacidadeSalvaSemana} turnos</span>
+                  <span className='pill-soft'>
+                    Salvo: {capacidadeSalvaSemana} turnos
+                  </span>
                 </div>
               </div>
             ) : (
-              <div className="capacity-stats-card muted">Nenhuma sala selecionada.</div>
+              <div className='capacity-stats-card muted'>
+                Nenhuma sala selecionada.
+              </div>
             )}
           </div>
           {selectedSala && capacidadeSemana !== capacidadeSalvaSemana ? (
-            <div className="capacity-warning inline">
+            <div className='capacity-warning inline'>
               ⚠️ Preenchido diferente do salvo — registre para aplicar.
             </div>
           ) : null}
           {!selectedSala ? (
-            <div className="alert">Selecione uma sala a partir da lista de locais.</div>
+            <div className='alert'>
+              Selecione uma sala a partir da lista de locais.
+            </div>
           ) : null}
-          <div className="capacity-wrapper">
-            <div className="capacity-legend">
-              <div className="capacity-copy">
-                <span className="muted small-print">
-                  Preencha quantas profissionais cabem por turno. Deixe em branco para ignorar.
+          <div className='capacity-wrapper'>
+            <div className='capacity-legend'>
+              <div className='capacity-copy'>
+                <span className='muted small-print'>
+                  Preencha quantas profissionais cabem por turno. Deixe em
+                  branco para ignorar.
                 </span>
-                <span className="muted small-print">
-                  Dica: use o atalho padrão ou limpe antes de salvar novos valores.
+                <span className='muted small-print'>
+                  Dica: use o atalho padrão ou limpe antes de salvar novos
+                  valores.
                 </span>
               </div>
-              <div className="capacity-quick">
+              <div className='capacity-quick'>
                 <button
-                  className="ghost-button small soft"
-                  type="button"
+                  className='ghost-button small soft'
+                  type='button'
                   onClick={fillDefaultCapacity}
                   disabled={!selectedSala}
                 >
                   🔄 Seg-Sex 1/turno
                 </button>
                 <button
-                  className="ghost-button small"
-                  type="button"
+                  className='ghost-button small'
+                  type='button'
                   onClick={clearCapacityGrid}
                   disabled={!selectedSala}
                 >
@@ -2501,38 +2895,44 @@ function LocaisPage() {
                 </button>
               </div>
             </div>
-            <div className="capacity-grid">
-              <div className="capacity-grid__header">
+            <div className='capacity-grid'>
+              <div className='capacity-grid__header'>
                 <span>Turno</span>
                 {diasSemana.map((dia) => (
                   <span key={dia.value}>{dia.label}</span>
                 ))}
               </div>
               {['manha', 'tarde'].map((turno) => (
-                <div key={turno} className="capacity-grid__row">
-                  <span className="capacity-grid__day">
+                <div key={turno} className='capacity-grid__row'>
+                  <span className='capacity-grid__day'>
                     {turno === 'manha' ? 'Manhã' : 'Tarde'}
                   </span>
                   {diasSemana.map((dia) => {
-                    const index = capacityGrid.findIndex((row) => row.dia_semana === dia.value);
+                    const index = capacityGrid.findIndex(
+                      (row) => row.dia_semana === dia.value,
+                    );
                     const currentRow = index >= 0 ? capacityGrid[index] : null;
                     const value =
-                      turno === 'manha' ? (currentRow?.manha ?? '') : (currentRow?.tarde ?? '');
+                      turno === 'manha'
+                        ? (currentRow?.manha ?? '')
+                        : (currentRow?.tarde ?? '');
                     return (
                       <input
                         key={`${turno}-${dia.value}`}
-                        type="number"
+                        type='number'
                         min={0}
                         value={value}
                         onChange={(event) => {
                           const next = event.target.value;
                           setCapacityGrid((prev) =>
                             prev.map((row) =>
-                              row.dia_semana === dia.value ? { ...row, [turno]: next } : row,
+                              row.dia_semana === dia.value
+                                ? { ...row, [turno]: next }
+                                : row,
                             ),
                           );
                         }}
-                        placeholder="0"
+                        placeholder='0'
                       />
                     );
                   })}
@@ -2540,11 +2940,19 @@ function LocaisPage() {
               ))}
             </div>
           </div>
-          <div className="account-actions">
-            <button className="primary-button" type="submit" disabled={!selectedSala}>
+          <div className='account-actions'>
+            <button
+              className='primary-button'
+              type='submit'
+              disabled={!selectedSala}
+            >
               Registrar capacidade
             </button>
-            <button className="ghost-button" type="button" onClick={() => setShowCapModal(false)}>
+            <button
+              className='ghost-button'
+              type='button'
+              onClick={() => setShowCapModal(false)}
+            >
               Cancelar
             </button>
           </div>
@@ -2578,7 +2986,9 @@ function PremissasPage() {
       );
     } catch (exception) {
       const message =
-        exception instanceof Error ? exception.message : 'Falha ao carregar premissas.';
+        exception instanceof Error
+          ? exception.message
+          : 'Falha ao carregar premissas.';
       setError(message);
     } finally {
       setLoading(false);
@@ -2599,65 +3009,83 @@ function PremissasPage() {
       setPremissas(saved);
       setSuccess('Premissas atualizadas.');
     } catch (exception) {
-      const message = exception instanceof Error ? exception.message : 'Erro ao salvar premissas.';
+      const message =
+        exception instanceof Error
+          ? exception.message
+          : 'Erro ao salvar premissas.';
       setError(message);
     }
   };
 
   if (loading) {
     return (
-      <section className="panel">
-        <p className="eyebrow">Premissas globais</p>
-        <p className="muted">Carregando...</p>
+      <section className='panel'>
+        <p className='eyebrow'>Premissas globais</p>
+        <p className='muted'>Carregando...</p>
       </section>
     );
   }
 
   if (!premissas) {
     return (
-      <section className="panel">
-        <p className="eyebrow">Premissas globais</p>
-        <div className="alert">Não foi possível carregar premissas.</div>
+      <section className='panel'>
+        <p className='eyebrow'>Premissas globais</p>
+        <div className='alert'>Não foi possível carregar premissas.</div>
       </section>
     );
   }
 
   return (
-    <section className="panel">
-      <div className="panel-header">
+    <section className='panel'>
+      <div className='panel-header'>
         <div>
-          <p className="eyebrow">Cadastros</p>
+          <p className='eyebrow'>Cadastros</p>
           <h2>Premissas globais</h2>
-          <p className="lede">Janela de planejamento e revezamento padrão.</p>
+          <p className='lede'>Janela de planejamento e revezamento padrão.</p>
         </div>
-        <div className="panel-actions">
-          <button className="ghost-button small" type="button" onClick={() => setShowHelp(true)}>
+        <div className='panel-actions'>
+          <button
+            className='ghost-button small'
+            type='button'
+            onClick={() => setShowHelp(true)}
+          >
             ?
           </button>
         </div>
       </div>
-      {error ? <div className="alert">{error}</div> : null}
-      {success ? <div className="success">{success}</div> : null}
+      {error ? <div className='alert'>{error}</div> : null}
+      {success ? <div className='success'>{success}</div> : null}
       <Modal
         open={showHelp}
         onClose={() => setShowHelp(false)}
-        title="Como preencher premissas"
-        description="Parâmetros gerais que guiam a geração."
+        title='Como preencher premissas'
+        description='Parâmetros gerais que guiam a geração.'
       >
-        <ul className="help-list">
+        <ul className='help-list'>
           <li>Janela em semanas define o horizonte da escala (default 4).</li>
-          <li>Limites de horas e dobras por semana protegem contra excesso de carga.</li>
-          <li>Política de revezamento documenta as regras de rotação entre locais.</li>
-          <li>Confirmação diária liga a rotina que lê Google Calendar e marca conflitos.</li>
-          <li>Use observações para registrar decisões temporárias (ex.: meta de 60h).</li>
+          <li>
+            Limites de horas e dobras por semana protegem contra excesso de
+            carga.
+          </li>
+          <li>
+            Política de revezamento documenta as regras de rotação entre locais.
+          </li>
+          <li>
+            Confirmação diária liga a rotina que lê Google Calendar e marca
+            conflitos.
+          </li>
+          <li>
+            Use observações para registrar decisões temporárias (ex.: meta de
+            60h).
+          </li>
         </ul>
       </Modal>
-      <form className="account-form" onSubmit={handleSubmit}>
-        <div className="two-cols">
-          <label className="field">
+      <form className='account-form' onSubmit={handleSubmit}>
+        <div className='two-cols'>
+          <label className='field'>
             <span>Janela (semanas)</span>
             <input
-              type="number"
+              type='number'
               min={1}
               max={12}
               value={premissas.janela_planejamento_semanas}
@@ -2669,62 +3097,76 @@ function PremissasPage() {
               }
             />
           </label>
-          <label className="field">
+          <label className='field'>
             <span>Limite de horas/semana</span>
             <input
-              type="number"
+              type='number'
               min={1}
               max={84}
               value={premissas.limite_horas_semana}
               onChange={(event) =>
-                setPremissas({ ...premissas, limite_horas_semana: Number(event.target.value) })
+                setPremissas({
+                  ...premissas,
+                  limite_horas_semana: Number(event.target.value),
+                })
               }
             />
           </label>
         </div>
-        <div className="two-cols">
-          <label className="field">
+        <div className='two-cols'>
+          <label className='field'>
             <span>Limite de dobras/semana</span>
             <input
-              type="number"
+              type='number'
               min={0}
               max={14}
               value={premissas.limite_dobras_semana}
               onChange={(event) =>
-                setPremissas({ ...premissas, limite_dobras_semana: Number(event.target.value) })
+                setPremissas({
+                  ...premissas,
+                  limite_dobras_semana: Number(event.target.value),
+                })
               }
             />
           </label>
-          <label className="field checkbox-field">
+          <label className='field checkbox-field'>
             <input
-              type="checkbox"
+              type='checkbox'
               checked={premissas.confirmacao_diaria}
               onChange={(event) =>
-                setPremissas({ ...premissas, confirmacao_diaria: event.target.checked })
+                setPremissas({
+                  ...premissas,
+                  confirmacao_diaria: event.target.checked,
+                })
               }
             />
             <span>Confirmação diária ativa</span>
           </label>
         </div>
-        <label className="field">
+        <label className='field'>
           <span>Política de revezamento</span>
           <textarea
             rows={3}
             value={premissas.politica_revezamento}
             onChange={(event) =>
-              setPremissas({ ...premissas, politica_revezamento: event.target.value })
+              setPremissas({
+                ...premissas,
+                politica_revezamento: event.target.value,
+              })
             }
           />
         </label>
-        <label className="field">
+        <label className='field'>
           <span>Observações</span>
           <textarea
             rows={3}
             value={premissas.observacoes}
-            onChange={(event) => setPremissas({ ...premissas, observacoes: event.target.value })}
+            onChange={(event) =>
+              setPremissas({ ...premissas, observacoes: event.target.value })
+            }
           />
         </label>
-        <button className="primary-button" type="submit">
+        <button className='primary-button' type='submit'>
           Salvar premissas
         </button>
       </form>
@@ -2774,7 +3216,10 @@ function Dashboard({
     () =>
       quickActions.map((action) => ({
         ...action,
-        allowed: hasPermission(user, action.permission) || user.isSuperuser || user.isStaff,
+        allowed:
+          hasPermission(user, action.permission) ||
+          user.isSuperuser ||
+          user.isStaff,
       })),
     [user],
   );
@@ -2795,7 +3240,10 @@ function Dashboard({
       setNewPassword('');
       setConfirmPassword('');
     } catch (exception) {
-      const message = exception instanceof Error ? exception.message : 'Erro ao trocar a senha.';
+      const message =
+        exception instanceof Error
+          ? exception.message
+          : 'Erro ao trocar a senha.';
       setPasswordError(message);
     } finally {
       setPasswordLoading(false);
@@ -2813,7 +3261,9 @@ function Dashboard({
       setEmailInput(updatedUser.email);
     } catch (exception) {
       const message =
-        exception instanceof Error ? exception.message : 'Não foi possível atualizar o email.';
+        exception instanceof Error
+          ? exception.message
+          : 'Não foi possível atualizar o email.';
       setEmailError(message);
     } finally {
       setEmailLoading(false);
@@ -2821,16 +3271,16 @@ function Dashboard({
   };
 
   return (
-    <div className="app-shell">
-      <aside className="sidebar">
-        <div className="brand">
-          <span className="brand-mark">Ag</span>
+    <div className='app-shell'>
+      <aside className='sidebar'>
+        <div className='brand'>
+          <span className='brand-mark'>Ag</span>
           <div>
             <strong>Agendador</strong>
             <small>Escalas clínicas</small>
           </div>
         </div>
-        <nav className="nav">
+        <nav className='nav'>
           {navItems.map((item) => (
             <button
               key={item.label}
@@ -2842,32 +3292,32 @@ function Dashboard({
             </button>
           ))}
         </nav>
-        <div className="sidebar-footer">
-          <p className="sidebar-user">
+        <div className='sidebar-footer'>
+          <p className='sidebar-user'>
             <strong>{user.name}</strong>
             <span>{user.role}</span>
           </p>
-          <button className="ghost-button" onClick={onLogout}>
+          <button className='ghost-button' onClick={onLogout}>
             Sair
           </button>
         </div>
       </aside>
 
-      <main className="main">
+      <main className='main'>
         {page === 'dashboard' ? (
           <>
-            <header className="topbar">
+            <header className='topbar'>
               <div>
-                <p className="eyebrow">Dashboard</p>
+                <p className='eyebrow'>Dashboard</p>
                 <h1>
                   {greeting}, {user.name}
                 </h1>
-                <p className="lede">
-                  Estado da escala, pendências e atalhos para publicar ou revisar. Animações virão
-                  na próxima iteração.
+                <p className='lede'>
+                  Estado da escala, pendências e atalhos para publicar ou
+                  revisar. Animações virão na próxima iteração.
                 </p>
               </div>
-              <div className="topbar-actions">
+              <div className='topbar-actions'>
                 {gatedActions.map((action) => (
                   <button
                     key={action.label}
@@ -2885,27 +3335,32 @@ function Dashboard({
                   </button>
                 ))}
               </div>
-              <p className="muted">
-                Ações ficam liberadas conforme permissões retornadas pelo backend (/auth/me).
+              <p className='muted'>
+                Ações ficam liberadas conforme permissões retornadas pelo
+                backend (/auth/me).
               </p>
             </header>
 
-            <section className="cards-grid">
+            <section className='cards-grid'>
               {metricsCards.map((card) => (
-                <article key={card.title} className="card" data-tone={card.tone}>
-                  <p className="card-title">{card.title}</p>
+                <article
+                  key={card.title}
+                  className='card'
+                  data-tone={card.tone}
+                >
+                  <p className='card-title'>{card.title}</p>
                   <h2>{card.value}</h2>
-                  <p className="card-detail">{card.detail}</p>
+                  <p className='card-detail'>{card.detail}</p>
                 </article>
               ))}
             </section>
 
-            <section className="panel">
-              <div className="panel-header">
+            <section className='panel'>
+              <div className='panel-header'>
                 <h2>Próximos passos</h2>
-                <span className="badge">Autenticação ativa</span>
+                <span className='badge'>Autenticação ativa</span>
               </div>
-              <ul className="bullet-list">
+              <ul className='bullet-list'>
                 {highlights.map((item) => (
                   <li key={item}>{item}</li>
                 ))}
@@ -2916,33 +3371,39 @@ function Dashboard({
 
         {page === 'account' ? (
           <>
-            <section className="panel">
-              <div className="panel-header">
+            <section className='panel'>
+              <div className='panel-header'>
                 <div>
-                  <p className="eyebrow">Minha conta</p>
+                  <p className='eyebrow'>Minha conta</p>
                   <h2>Identidade do usuário</h2>
-                  <p className="lede">Dados da sessão atual.</p>
+                  <p className='lede'>Dados da sessão atual.</p>
                 </div>
-                <span className="badge">Sessão autenticada</span>
+                <span className='badge'>Sessão autenticada</span>
               </div>
 
-              <div className="account-overview">
-                <div className="profile-card">
-                  <div className="avatar" aria-hidden>
+              <div className='account-overview'>
+                <div className='profile-card'>
+                  <div className='avatar' aria-hidden>
                     {userInitial}
                   </div>
-                  <div className="profile-text">
-                    <p className="eyebrow">Usuário</p>
+                  <div className='profile-text'>
+                    <p className='eyebrow'>Usuário</p>
                     <h3>{user.name}</h3>
-                    <p className="muted">{user.email || 'Email não informado'}</p>
-                    <div className="chip-row">
-                      <span className="pill pill-soft">Função: {user.role}</span>
-                      <span className="pill pill-ghost">Autenticação ativa</span>
+                    <p className='muted'>
+                      {user.email || 'Email não informado'}
+                    </p>
+                    <div className='chip-row'>
+                      <span className='pill pill-soft'>
+                        Função: {user.role}
+                      </span>
+                      <span className='pill pill-ghost'>
+                        Autenticação ativa
+                      </span>
                     </div>
                   </div>
                 </div>
 
-                <dl className="account-details">
+                <dl className='account-details'>
                   <div>
                     <dt>ID</dt>
                     <dd>{user.id}</dd>
@@ -2965,7 +3426,13 @@ function Dashboard({
                   </div>
                   <div>
                     <dt>Privilégios</dt>
-                    <dd>{user.isSuperuser ? 'Superusuário' : user.isStaff ? 'Staff' : 'Padrão'}</dd>
+                    <dd>
+                      {user.isSuperuser
+                        ? 'Superusuário'
+                        : user.isStaff
+                          ? 'Staff'
+                          : 'Padrão'}
+                    </dd>
                   </div>
                 </dl>
               </div>
@@ -2978,90 +3445,113 @@ function Dashboard({
               />
             </section>
 
-            <section className="panel">
-              <div className="panel-header">
+            <section className='panel'>
+              <div className='panel-header'>
                 <div>
-                  <p className="eyebrow">Contato</p>
+                  <p className='eyebrow'>Contato</p>
                   <h2>Atualizar email</h2>
-                  <p className="lede">Mantenha seu email de recuperação sempre atualizado.</p>
+                  <p className='lede'>
+                    Mantenha seu email de recuperação sempre atualizado.
+                  </p>
                 </div>
-                <span className="badge">Identidade</span>
+                <span className='badge'>Identidade</span>
               </div>
-              <form className="account-form" onSubmit={handleEmailSubmit}>
-                <label className="field">
+              <form className='account-form' onSubmit={handleEmailSubmit}>
+                <label className='field'>
                   <span>Novo email</span>
                   <input
                     required
-                    type="email"
-                    autoComplete="email"
+                    type='email'
+                    autoComplete='email'
                     value={emailInput}
                     onChange={(event) => setEmailInput(event.target.value)}
-                    placeholder="seu.email@exemplo.com"
+                    placeholder='seu.email@exemplo.com'
                   />
                 </label>
-                {emailError ? <div className="alert">{emailError}</div> : null}
-                {emailSuccess ? <div className="success">{emailSuccess}</div> : null}
-                <div className="account-actions">
-                  <button type="submit" className="primary-button" disabled={emailLoading}>
+                {emailError ? <div className='alert'>{emailError}</div> : null}
+                {emailSuccess ? (
+                  <div className='success'>{emailSuccess}</div>
+                ) : null}
+                <div className='account-actions'>
+                  <button
+                    type='submit'
+                    className='primary-button'
+                    disabled={emailLoading}
+                  >
                     {emailLoading ? 'Salvando...' : 'Atualizar email'}
                   </button>
-                  <p className="muted small-print">
-                    Se alterado, este email será usado para login e recuperação de senha.
+                  <p className='muted small-print'>
+                    Se alterado, este email será usado para login e recuperação
+                    de senha.
                   </p>
                 </div>
               </form>
             </section>
 
-            <section className="panel">
-              <div className="panel-header">
+            <section className='panel'>
+              <div className='panel-header'>
                 <div>
-                  <p className="eyebrow">Segurança</p>
+                  <p className='eyebrow'>Segurança</p>
                   <h2>Atualizar senha</h2>
-                  <p className="lede">Mantenha suas credenciais fortes sem sair da sessão.</p>
+                  <p className='lede'>
+                    Mantenha suas credenciais fortes sem sair da sessão.
+                  </p>
                 </div>
-                <span className="badge">Credenciais</span>
+                <span className='badge'>Credenciais</span>
               </div>
-              <form className="account-form" onSubmit={handlePasswordSubmit}>
-                <label className="field">
+              <form className='account-form' onSubmit={handlePasswordSubmit}>
+                <label className='field'>
                   <span>Senha atual</span>
                   <input
                     required
-                    type="password"
-                    autoComplete="current-password"
+                    type='password'
+                    autoComplete='current-password'
                     value={oldPassword}
                     onChange={(event) => setOldPassword(event.target.value)}
                   />
                 </label>
-                <label className="field">
-                  <div className="field-label">
+                <label className='field'>
+                  <div className='field-label'>
                     <span>Nova senha</span>
                     <PasswordRulesHint />
                   </div>
                   <input
                     required
-                    type="password"
-                    autoComplete="new-password"
+                    type='password'
+                    autoComplete='new-password'
                     value={newPassword}
                     onChange={(event) => setNewPassword(event.target.value)}
                   />
                 </label>
-                <label className="field">
+                <label className='field'>
                   <span>Confirmar nova senha</span>
                   <input
                     required
-                    type="password"
-                    autoComplete="new-password"
+                    type='password'
+                    autoComplete='new-password'
                     value={confirmPassword}
                     onChange={(event) => setConfirmPassword(event.target.value)}
                   />
                 </label>
-                {passwordError ? <div className="alert">{passwordError}</div> : null}
-                {passwordSuccess ? <div className="success">{passwordSuccess}</div> : null}
-                <div className="account-actions">
-                  <button type="submit" className="primary-button" disabled={passwordLoading}>
+                {passwordError ? (
+                  <div className='alert'>{passwordError}</div>
+                ) : null}
+                {passwordSuccess ? (
+                  <div className='success'>{passwordSuccess}</div>
+                ) : null}
+                <div className='account-actions'>
+                  <button
+                    type='submit'
+                    className='primary-button'
+                    disabled={passwordLoading}
+                  >
                     {passwordLoading ? 'Salvando...' : 'Atualizar senha'}
                   </button>
-                  <button type="button" className="ghost-button" onClick={onLogout}>
+                  <button
+                    type='button'
+                    className='ghost-button'
+                    onClick={onLogout}
+                  >
                     Sair da sessão
                   </button>
                 </div>
@@ -3111,7 +3601,9 @@ export default function App() {
       setAuth(result);
     } catch (exception) {
       const message =
-        exception instanceof Error ? exception.message : 'Não foi possível autenticar.';
+        exception instanceof Error
+          ? exception.message
+          : 'Não foi possível autenticar.';
       setError({ message });
     } finally {
       setLoading(false);
@@ -3143,9 +3635,9 @@ export default function App() {
 
   if (booting) {
     return (
-      <div className="login-shell">
-        <div className="login-card">
-          <p className="eyebrow">Carregando sessão...</p>
+      <div className='login-shell'>
+        <div className='login-card'>
+          <p className='eyebrow'>Carregando sessão...</p>
         </div>
       </div>
     );
@@ -3159,13 +3651,19 @@ export default function App() {
           onBack={() => {
             setAuthScreen('login');
             setResetToken(null);
-            window.history.replaceState({}, document.title, window.location.pathname);
+            window.history.replaceState(
+              {},
+              document.title,
+              window.location.pathname,
+            );
           }}
         />
       );
     }
     if (authScreen === 'reset-request') {
-      return <PasswordResetRequestScreen onBack={() => setAuthScreen('login')} />;
+      return (
+        <PasswordResetRequestScreen onBack={() => setAuthScreen('login')} />
+      );
     }
     return (
       <LoginScreen
