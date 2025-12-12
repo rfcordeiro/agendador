@@ -440,11 +440,16 @@ const diasSemana = [
 ];
 
 const recorrencias: { value: RecorrenciaTipo; label: string }[] = [
-  { value: 'semanal', label: 'Semanal' },
   { value: 'quinzenal', label: 'Quinzenal (semana sim/não)' },
   { value: 'mensal_posicional', label: 'Mensal (n-ésima/última)' },
   { value: 'eventual', label: 'Eventual (datas avulsas)' },
 ];
+const recorrenciaOrder: Record<RecorrenciaTipo, number> = {
+  mensal_posicional: 0,
+  quinzenal: 1,
+  eventual: 2,
+  semanal: 3,
+};
 
 const posicoesMensais = [
   { value: 1, label: '1ª' },
@@ -2025,17 +2030,17 @@ function LocaisPage() {
     recorrencia_tipo: RecorrenciaTipo;
     quinzenal_offset: number;
     posicao_no_mes: number;
-    eventos: string;
+    eventos: string[];
   }>({
     id: null,
     sala: null,
     turno: 'manha',
     dia_semana: 0,
     capacidade: 1,
-    recorrencia_tipo: 'semanal',
+    recorrencia_tipo: 'quinzenal',
     quinzenal_offset: 0,
     posicao_no_mes: 1,
-    eventos: '',
+    eventos: [],
   });
 
   const loadData = useCallback(async () => {
@@ -2082,6 +2087,21 @@ function LocaisPage() {
     }));
   }, [targetSalaId]);
 
+  useEffect(() => {
+    if (
+      advancedCapacityForm.recorrencia_tipo === 'eventual' &&
+      advancedCapacityForm.eventos.length === 0
+    ) {
+      setAdvancedCapacityForm((prev) => ({
+        ...prev,
+        eventos: [''],
+      }));
+    }
+  }, [
+    advancedCapacityForm.eventos.length,
+    advancedCapacityForm.recorrencia_tipo,
+  ]);
+
   const capacidadesSemanais = useMemo(
     () => capacidades.filter((cap) => cap.recorrencia_tipo === 'semanal'),
     [capacidades],
@@ -2096,6 +2116,10 @@ function LocaisPage() {
         advancedSalaId ? cap.sala === advancedSalaId : true,
       ),
     [advancedSalaId, capacidadesAvancadas],
+  );
+  const advancedSala = useMemo(
+    () => salas.find((sala) => sala.id === advancedSalaId) ?? null,
+    [advancedSalaId, salas],
   );
 
   const handleLocalSubmit = async (event: FormEvent) => {
@@ -2264,7 +2288,7 @@ function LocaisPage() {
     setSuccess(null);
     const eventosList =
       advancedCapacityForm.recorrencia_tipo === 'eventual'
-        ? parseEventosInput(advancedCapacityForm.eventos)
+        ? normalizeEventos(advancedCapacityForm.eventos)
         : [];
     if (
       advancedCapacityForm.recorrencia_tipo === 'eventual' &&
@@ -2323,7 +2347,7 @@ function LocaisPage() {
       recorrencia_tipo: capacidade.recorrencia_tipo,
       quinzenal_offset: capacidade.quinzenal_offset ?? 0,
       posicao_no_mes: capacidade.posicao_no_mes ?? 1,
-      eventos: (capacidade.eventos ?? []).join(', '),
+      eventos: capacidade.eventos ?? [],
     });
     setShowAdvancedModal(true);
   };
@@ -2406,11 +2430,8 @@ function LocaisPage() {
     );
   };
 
-  const parseEventosInput = (raw: string): string[] =>
-    raw
-      .split(/[\n,;]+/u)
-      .map((item) => item.trim())
-      .filter(Boolean);
+  const normalizeEventos = (dates: string[]): string[] =>
+    dates.map((item) => item.trim()).filter(Boolean);
 
   const resetAdvancedForm = (salaId?: number | null) =>
     setAdvancedCapacityForm({
@@ -2419,11 +2440,37 @@ function LocaisPage() {
       turno: 'manha',
       dia_semana: 0,
       capacidade: 1,
-      recorrencia_tipo: 'semanal',
+      recorrencia_tipo: 'quinzenal',
       quinzenal_offset: 0,
       posicao_no_mes: 1,
-      eventos: '',
+      eventos: [],
     });
+
+  const addEventualDate = () =>
+    setAdvancedCapacityForm((prev) => ({
+      ...prev,
+      eventos: [...prev.eventos, ''],
+    }));
+
+  const updateEventualDate = (index: number, value: string) =>
+    setAdvancedCapacityForm((prev) => {
+      const eventos = [...prev.eventos];
+      eventos[index] = value;
+      return { ...prev, eventos };
+    });
+
+  const removeEventualDate = (index: number) =>
+    setAdvancedCapacityForm((prev) => ({
+      ...prev,
+      eventos: prev.eventos.filter((_, current) => current !== index),
+    }));
+
+  const labelRecorrenciaTipo = (tipo: RecorrenciaTipo): string => {
+    if (tipo === 'quinzenal') return 'Quinzenal';
+    if (tipo === 'mensal_posicional') return 'Mensal posicional';
+    if (tipo === 'eventual') return 'Eventual';
+    return 'Semanal';
+  };
 
   const descricaoRecorrencia = (cap: CapacidadeSala): string => {
     if (cap.recorrencia_tipo === 'quinzenal') {
@@ -2756,133 +2803,191 @@ function LocaisPage() {
                               value: dia.value,
                             };
                           });
+                          const recorrenciasDaSala = capacidadesAvancadas
+                            .filter((cap) => cap.sala === sala.id)
+                            .sort(
+                              (a, b) =>
+                                (recorrenciaOrder[a.recorrencia_tipo] ?? 99) -
+                                (recorrenciaOrder[b.recorrencia_tipo] ?? 99),
+                            );
 
                           return (
                             <div key={sala.id} className='sala-item'>
-                              <div>
-                                <strong>
-                                  {getSalaLabel(sala, locaisById)}
-                                </strong>
-                                <div className='dia-summary'>
-                                  {resumoDias.map((dia) => (
-                                    <span
-                                      key={`${sala.id}-${dia.value}`}
-                                      className={`day-chip day-chip--sala${
-                                        dia.total === 0
-                                          ? ' day-chip--empty'
-                                          : ''
-                                      }`}
-                                      data-day={dia.value}
-                                    >
-                                      <span className='day-label'>
-                                        {dia.label}
-                                      </span>
+                              <div className='sala-main'>
+                                <div>
+                                  <strong>
+                                    {getSalaLabel(sala, locaisById)}
+                                  </strong>
+                                  <div className='dia-summary'>
+                                    {resumoDias.map((dia) => (
                                       <span
-                                        className={`day-badge${dia.total === 0 ? ' badge-empty' : ''}`}
+                                        key={`${sala.id}-${dia.value}`}
+                                        className={`day-chip day-chip--sala${
+                                          dia.total === 0
+                                            ? ' day-chip--empty'
+                                            : ''
+                                        }`}
+                                        data-day={dia.value}
                                       >
-                                        {dia.total}
+                                        <span className='day-label'>
+                                          {dia.label}
+                                        </span>
+                                        <span
+                                          className={`day-badge${dia.total === 0 ? ' badge-empty' : ''}`}
+                                        >
+                                          {dia.total}
+                                        </span>
                                       </span>
-                                    </span>
-                                  ))}
+                                    ))}
+                                  </div>
+                                </div>
+                                <div className='sala-actions'>
+                                  <button
+                                    className='ghost-button small soft'
+                                    type='button'
+                                    onClick={() => {
+                                      setEditingSala(sala);
+                                      setSalaForm({
+                                        local: sala.local,
+                                        nome: sala.nome,
+                                      });
+                                      setShowSalaModal(true);
+                                    }}
+                                  >
+                                    ✏️ Editar
+                                  </button>
+                                  <button
+                                    className='ghost-button small soft'
+                                    type='button'
+                                    onClick={async () => {
+                                      if (
+                                        window.confirm(
+                                          `Remover a sala ${getSalaLabel(sala, locaisById)}?`,
+                                        )
+                                      ) {
+                                        try {
+                                          await deleteSala(sala.id);
+                                          setSalas((prev) =>
+                                            prev.filter(
+                                              (item) => item.id !== sala.id,
+                                            ),
+                                          );
+                                          setCapacidades((prev) =>
+                                            prev.filter(
+                                              (cap) => cap.sala !== sala.id,
+                                            ),
+                                          );
+                                          setSuccess('Sala removida.');
+                                        } catch (exception) {
+                                          const message =
+                                            exception instanceof Error
+                                              ? exception.message
+                                              : 'Erro ao remover sala.';
+                                          setError(message);
+                                        }
+                                      }
+                                    }}
+                                  >
+                                    🗑️ Remover
+                                  </button>
+                                  <button
+                                    className='ghost-button small primary-ghost'
+                                    type='button'
+                                    onClick={() => {
+                                      setCapTargetSala(sala);
+                                      setShowCapModal(true);
+                                      setCapacityGrid(
+                                        diasSemana.map((dia) => {
+                                          const manhaExistente =
+                                            capacidadesSemanais.find(
+                                              (cap) =>
+                                                cap.sala === sala.id &&
+                                                cap.dia_semana === dia.value &&
+                                                cap.turno === 'manha',
+                                            );
+                                          const tardeExistente =
+                                            capacidadesSemanais.find(
+                                              (cap) =>
+                                                cap.sala === sala.id &&
+                                                cap.dia_semana === dia.value &&
+                                                cap.turno === 'tarde',
+                                            );
+                                          return {
+                                            dia_semana: dia.value,
+                                            manha: manhaExistente
+                                              ? String(
+                                                  manhaExistente.capacidade ??
+                                                    '',
+                                                )
+                                              : '',
+                                            tarde: tardeExistente
+                                              ? String(
+                                                  tardeExistente.capacidade ??
+                                                    '',
+                                                )
+                                              : '',
+                                          };
+                                        }),
+                                      );
+                                    }}
+                                  >
+                                    📊 Semana
+                                  </button>
                                 </div>
                               </div>
-                              <div className='sala-actions'>
-                                <button
-                                  className='ghost-button small soft'
-                                  type='button'
-                                  onClick={() => {
-                                    setEditingSala(sala);
-                                    setSalaForm({
-                                      local: sala.local,
-                                      nome: sala.nome,
-                                    });
-                                    setShowSalaModal(true);
-                                  }}
-                                >
-                                  ✏️ Editar
-                                </button>
-                                <button
-                                  className='ghost-button small soft'
-                                  type='button'
-                                  onClick={async () => {
-                                    if (
-                                      window.confirm(
-                                        `Remover a sala ${getSalaLabel(sala, locaisById)}?`,
-                                      )
-                                    ) {
-                                      try {
-                                        await deleteSala(sala.id);
-                                        setSalas((prev) =>
-                                          prev.filter(
-                                            (item) => item.id !== sala.id,
-                                          ),
-                                        );
-                                        setCapacidades((prev) =>
-                                          prev.filter(
-                                            (cap) => cap.sala !== sala.id,
-                                          ),
-                                        );
-                                        setSuccess('Sala removida.');
-                                      } catch (exception) {
-                                        const message =
-                                          exception instanceof Error
-                                            ? exception.message
-                                            : 'Erro ao remover sala.';
-                                        setError(message);
-                                      }
-                                    }
-                                  }}
-                                >
-                                  🗑️ Remover
-                                </button>
-                                <button
-                                  className='ghost-button small primary-ghost'
-                                  type='button'
-                                  onClick={() => {
-                                    setCapTargetSala(sala);
-                                    setShowCapModal(true);
-                                    setCapacityGrid(
-                                      diasSemana.map((dia) => {
-                                        const manhaExistente =
-                                          capacidadesSemanais.find(
-                                            (cap) =>
-                                              cap.sala === sala.id &&
-                                              cap.dia_semana === dia.value &&
-                                              cap.turno === 'manha',
-                                          );
-                                        const tardeExistente =
-                                          capacidadesSemanais.find(
-                                            (cap) =>
-                                              cap.sala === sala.id &&
-                                              cap.dia_semana === dia.value &&
-                                              cap.turno === 'tarde',
-                                          );
-                                        return {
-                                          dia_semana: dia.value,
-                                          manha: manhaExistente
-                                            ? String(
-                                                manhaExistente.capacidade ?? '',
-                                              )
-                                            : '',
-                                          tarde: tardeExistente
-                                            ? String(
-                                                tardeExistente.capacidade ?? '',
-                                              )
-                                            : '',
-                                        };
-                                      }),
-                                    );
-                                  }}
-                                >
-                                  📊 Semana
-                                </button>
-                                <button
-                                  className='ghost-button small soft'
-                                  type='button'
-                                  onClick={() => openAdvancedModal(sala.id)}
-                                >
-                                  🔁 Recorrência
-                                </button>
+                              <div className='recorrencia-section'>
+                                <div className='recorrencia-header'>
+                                  <p className='muted small-print'>
+                                    Recorrências quinzenais, mensais e eventuais
+                                  </p>
+                                  <button
+                                    className='ghost-button small primary-ghost'
+                                    type='button'
+                                    onClick={() => openAdvancedModal(sala.id)}
+                                  >
+                                    ✏️ Gerir recorrências
+                                  </button>
+                                </div>
+                                {recorrenciasDaSala.length ? (
+                                  <div className='recorrencia-list'>
+                                    {recorrenciasDaSala.map((recorrencia) => (
+                                      <div
+                                        key={`${recorrencia.id}-${recorrencia.recorrencia_tipo}`}
+                                        className='recorrencia-card'
+                                      >
+                                        <div className='recorrencia-meta'>
+                                          <span className='pill-soft small-pill'>
+                                            {recorrencia.turno === 'manha'
+                                              ? 'Manhã'
+                                              : 'Tarde'}
+                                          </span>
+                                          <span className='pill-soft small-pill'>
+                                            {labelRecorrenciaTipo(
+                                              recorrencia.recorrencia_tipo,
+                                            )}
+                                          </span>
+                                          <span className='pill-soft small-pill'>
+                                            {recorrencia.capacidade} turno(s)
+                                          </span>
+                                        </div>
+                                        <p className='muted small-print'>
+                                          {descricaoRecorrencia(recorrencia)}
+                                        </p>
+                                        {recorrencia.eventos &&
+                                        recorrencia.eventos.length ? (
+                                          <p className='muted small-print'>
+                                            Datas:{' '}
+                                            {recorrencia.eventos.join(', ')}
+                                          </p>
+                                        ) : null}
+                                      </div>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <p className='muted small-print'>
+                                    Nenhuma recorrência avançada cadastrada.
+                                  </p>
+                                )}
                               </div>
                             </div>
                           );
@@ -3235,65 +3340,63 @@ function LocaisPage() {
           className='account-form capacity-advanced-form'
           onSubmit={handleAdvancedCapSubmit}
         >
-          <div className='two-cols'>
-            <label className='field'>
-              <span>Sala</span>
-              <select
-                value={advancedCapacityForm.sala ?? ''}
-                onChange={(event) =>
-                  setAdvancedCapacityForm({
-                    ...advancedCapacityForm,
-                    sala: Number(event.target.value),
-                  })
-                }
-                required
-              >
-                <option value='' disabled>
-                  Selecione
-                </option>
-                {salas.map((sala) => (
-                  <option key={sala.id} value={sala.id}>
-                    {getSalaLabel(sala, locaisById)}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className='field'>
-              <span>Turno</span>
-              <select
-                value={advancedCapacityForm.turno}
-                onChange={(event) =>
-                  setAdvancedCapacityForm({
-                    ...advancedCapacityForm,
-                    turno: event.target.value,
-                  })
-                }
-              >
-                <option value='manha'>Manhã</option>
-                <option value='tarde'>Tarde</option>
-              </select>
-            </label>
+          <div className='field'>
+            <span>Sala</span>
+            <div className='selected-sala'>
+              <div>
+                <strong>
+                  {advancedSala
+                    ? getSalaLabel(advancedSala, locaisById)
+                    : 'Escolha a sala pelo botão de recorrência da listagem.'}
+                </strong>
+                <p className='muted small-print'>
+                  A recorrência é registrada diretamente nesta sala.
+                </p>
+              </div>
+            </div>
           </div>
-          <div className='two-cols'>
-            <label className='field'>
-              <span>Recorrência</span>
-              <select
-                value={advancedCapacityForm.recorrencia_tipo}
-                onChange={(event) =>
-                  setAdvancedCapacityForm({
-                    ...advancedCapacityForm,
-                    recorrencia_tipo: event.target.value as RecorrenciaTipo,
-                  })
-                }
-              >
-                {recorrencias.map((rec) => (
-                  <option key={rec.value} value={rec.value}>
-                    {rec.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            {advancedCapacityForm.recorrencia_tipo !== 'eventual' ? (
+          <label className='field'>
+            <span>Tipo de recorrência</span>
+            <div className='radio-row'>
+              {recorrencias.map((rec) => (
+                <label
+                  key={rec.value}
+                  className={`radio-chip${advancedCapacityForm.recorrencia_tipo === rec.value ? ' is-active' : ''}`}
+                >
+                  <input
+                    type='radio'
+                    name='recorrencia'
+                    value={rec.value}
+                    checked={
+                      advancedCapacityForm.recorrencia_tipo === rec.value
+                    }
+                    onChange={(event) => {
+                      const nextRec = event.target.value as RecorrenciaTipo;
+                      setAdvancedCapacityForm((prev) => ({
+                        ...prev,
+                        recorrencia_tipo: nextRec,
+                        eventos:
+                          nextRec === 'eventual'
+                            ? prev.eventos.length
+                              ? prev.eventos
+                              : ['']
+                            : [],
+                        quinzenal_offset:
+                          nextRec === 'quinzenal' ? prev.quinzenal_offset : 0,
+                        posicao_no_mes:
+                          nextRec === 'mensal_posicional'
+                            ? prev.posicao_no_mes
+                            : 1,
+                      }));
+                    }}
+                  />
+                  <span>{rec.label}</span>
+                </label>
+              ))}
+            </div>
+          </label>
+          {advancedCapacityForm.recorrencia_tipo !== 'eventual' ? (
+            <div className='two-cols'>
               <label className='field'>
                 <span>Dia da semana</span>
                 <select
@@ -3312,65 +3415,101 @@ function LocaisPage() {
                   ))}
                 </select>
               </label>
-            ) : null}
-          </div>
-          {advancedCapacityForm.recorrencia_tipo === 'quinzenal' ? (
-            <label className='field'>
-              <span>Offset quinzenal</span>
-              <select
-                value={advancedCapacityForm.quinzenal_offset}
-                onChange={(event) =>
-                  setAdvancedCapacityForm({
-                    ...advancedCapacityForm,
-                    quinzenal_offset: Number(event.target.value),
-                  })
-                }
-              >
-                {offsetsQuinzenais.map((offset) => (
-                  <option key={offset.value} value={offset.value}>
-                    {offset.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-          ) : null}
-          {advancedCapacityForm.recorrencia_tipo === 'mensal_posicional' ? (
-            <label className='field'>
-              <span>Posição no mês</span>
-              <select
-                value={advancedCapacityForm.posicao_no_mes}
-                onChange={(event) =>
-                  setAdvancedCapacityForm({
-                    ...advancedCapacityForm,
-                    posicao_no_mes: Number(event.target.value),
-                  })
-                }
-              >
-                {posicoesMensais.map((posicao) => (
-                  <option key={posicao.value} value={posicao.value}>
-                    {posicao.label}
-                  </option>
-                ))}
-              </select>
-            </label>
+              {advancedCapacityForm.recorrencia_tipo === 'quinzenal' ? (
+                <label className='field'>
+                  <span>Offset quinzenal</span>
+                  <select
+                    value={advancedCapacityForm.quinzenal_offset}
+                    onChange={(event) =>
+                      setAdvancedCapacityForm({
+                        ...advancedCapacityForm,
+                        quinzenal_offset: Number(event.target.value),
+                      })
+                    }
+                  >
+                    {offsetsQuinzenais.map((offset) => (
+                      <option key={offset.value} value={offset.value}>
+                        {offset.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : null}
+              {advancedCapacityForm.recorrencia_tipo === 'mensal_posicional' ? (
+                <label className='field'>
+                  <span>Posição no mês</span>
+                  <select
+                    value={advancedCapacityForm.posicao_no_mes}
+                    onChange={(event) =>
+                      setAdvancedCapacityForm({
+                        ...advancedCapacityForm,
+                        posicao_no_mes: Number(event.target.value),
+                      })
+                    }
+                  >
+                    {posicoesMensais.map((posicao) => (
+                      <option key={posicao.value} value={posicao.value}>
+                        {posicao.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : null}
+            </div>
           ) : null}
           {advancedCapacityForm.recorrencia_tipo === 'eventual' ? (
+            <div className='stacked'>
+              <div className='field-label'>
+                <span>Datas eventuais</span>
+                <small className='muted'>
+                  Use o datepicker para adicionar e editar as datas.
+                </small>
+              </div>
+              <div className='event-date-list'>
+                {advancedCapacityForm.eventos.map((evento, index) => (
+                  <div key={`evento-${index}`} className='event-date-row'>
+                    <input
+                      type='date'
+                      value={evento}
+                      onChange={(event) =>
+                        updateEventualDate(index, event.target.value)
+                      }
+                    />
+                    <button
+                      className='ghost-button small soft'
+                      type='button'
+                      onClick={() => removeEventualDate(index)}
+                    >
+                      Remover
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <button
+                className='ghost-button small primary-ghost'
+                type='button'
+                onClick={addEventualDate}
+              >
+                + Adicionar data
+              </button>
+            </div>
+          ) : null}
+          <div className='two-cols'>
             <label className='field'>
-              <span>Datas eventuais (AAAA-MM-DD)</span>
-              <textarea
-                rows={2}
-                value={advancedCapacityForm.eventos}
+              <span>Turno</span>
+              <select
+                value={advancedCapacityForm.turno}
                 onChange={(event) =>
                   setAdvancedCapacityForm({
                     ...advancedCapacityForm,
-                    eventos: event.target.value,
+                    turno: event.target.value,
                   })
                 }
-                placeholder='Separe por vírgula ou quebra de linha (ex.: 2025-05-03, 2025-10-18)'
-              />
+              >
+                <option value='manha'>Manhã</option>
+                <option value='tarde'>Tarde</option>
+              </select>
             </label>
-          ) : null}
-          <div className='two-cols'>
             <label className='field'>
               <span>Capacidade</span>
               <input
@@ -3386,22 +3525,19 @@ function LocaisPage() {
                 required
               />
             </label>
-            <div className='field checkbox-field'>
-              <button className='primary-button' type='submit'>
-                {advancedCapacityForm.id
-                  ? 'Atualizar capacidade'
-                  : 'Salvar capacidade'}
-              </button>
-            </div>
           </div>
-          <div className='capacity-legend'>
-            <div className='capacity-copy'>
-              <p className='muted small-print'>
-                Lista apenas recorrências não semanais da sala selecionada.
-              </p>
-            </div>
+          <div className='account-actions'>
             <button
-              className='ghost-button small soft'
+              className='primary-button'
+              type='submit'
+              disabled={!advancedSala}
+            >
+              {advancedCapacityForm.id
+                ? 'Atualizar capacidade'
+                : 'Salvar capacidade'}
+            </button>
+            <button
+              className='ghost-button soft'
               type='button'
               onClick={() => resetAdvancedForm(advancedSalaId)}
             >
@@ -3411,9 +3547,11 @@ function LocaisPage() {
         </form>
         <div className='advanced-list'>
           <p className='muted small-print'>
-            {capacidadesAvancadasDaSala.length
-              ? 'Regras avançadas desta sala.'
-              : 'Nenhuma recorrência avançada cadastrada.'}
+            {!advancedSala
+              ? 'Selecione uma sala para ver as recorrências avançadas.'
+              : capacidadesAvancadasDaSala.length
+                ? 'Regras avançadas desta sala.'
+                : 'Nenhuma recorrência avançada cadastrada para esta sala.'}
           </p>
           {capacidadesAvancadasDaSala.map((capacidade) => (
             <div key={capacidade.id} className='advanced-item'>
@@ -3423,14 +3561,8 @@ function LocaisPage() {
                   {capacidade.capacidade} turno(s)
                 </strong>
                 <p className='muted small-print'>
-                  {capacidade.recorrencia_tipo === 'eventual'
-                    ? 'Eventual'
-                    : capacidade.recorrencia_tipo === 'quinzenal'
-                      ? 'Quinzenal'
-                      : capacidade.recorrencia_tipo === 'mensal_posicional'
-                        ? 'Mensal posicional'
-                        : 'Semanal'}{' '}
-                  · {descricaoRecorrencia(capacidade)}
+                  {labelRecorrenciaTipo(capacidade.recorrencia_tipo)} ·{' '}
+                  {descricaoRecorrencia(capacidade)}
                 </p>
                 {capacidade.eventos && capacidade.eventos.length ? (
                   <p className='muted small-print'>

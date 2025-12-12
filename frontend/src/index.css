@@ -162,6 +162,11 @@ p {
   padding: 4px 10px;
 }
 
+.small-pill {
+  padding: 4px 8px;
+  font-size: 12px;
+}
+
 .primary-button {
   border: none;
   border-radius: var(--radius-pill);
@@ -260,6 +265,45 @@ p {
 .field span {
   font-weight: 600;
   color: var(--color-ink);
+}
+
+.selected-sala {
+  border: 1px dashed var(--color-border);
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: #ffffff;
+  box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.02);
+}
+
+.radio-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.radio-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--color-border);
+  background: #ffffff;
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--color-ink);
+  box-shadow: inset 0 -2px 0 rgba(15, 23, 42, 0.02);
+}
+
+.radio-chip input {
+  margin: 0;
+  accent-color: #1f6feb;
+}
+
+.radio-chip.is-active {
+  border-color: rgba(31, 111, 235, 0.5);
+  background: linear-gradient(135deg, rgba(31, 111, 235, 0.08), #ffffff);
+  box-shadow: 0 8px 18px rgba(31, 111, 235, 0.14);
 }
 
 .field input {
@@ -572,13 +616,20 @@ p {
 
 .sala-item {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 10px 12px;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 12px 14px;
   border: 1px solid var(--color-border);
   border-radius: 12px;
   background: rgba(248, 250, 252, 0.8);
+}
+
+.sala-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 .sala-actions {
@@ -586,6 +637,40 @@ p {
   gap: 6px;
   flex-wrap: wrap;
   justify-content: flex-end;
+}
+
+.recorrencia-section {
+  width: 100%;
+  border-top: 1px solid var(--color-border);
+  padding-top: 8px;
+}
+
+.recorrencia-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.recorrencia-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.recorrencia-card {
+  border: 1px dashed var(--color-border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: #ffffff;
+}
+
+.recorrencia-meta {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
 }
 
 .dia-summary {
@@ -1047,6 +1132,18 @@ p {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 10px;
+}
+
+.event-date-list {
+  display: grid;
+  gap: 8px;
+}
+
+.event-date-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  align-items: center;
 }
 
 .two-panels {
