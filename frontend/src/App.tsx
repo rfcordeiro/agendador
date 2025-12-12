@@ -65,13 +65,23 @@ interface Sala {
   ativa: boolean;
 }
 
+type RecorrenciaTipo =
+  | 'semanal'
+  | 'quinzenal'
+  | 'mensal_posicional'
+  | 'eventual';
+
 interface CapacidadeSala {
   id: number;
   sala: number;
-  dia_semana: number;
+  dia_semana: number | null;
   turno: string;
   capacidade: number;
   data_especial: string | null;
+  recorrencia_tipo: RecorrenciaTipo;
+  quinzenal_offset: number | null;
+  posicao_no_mes: number | null;
+  eventos: string[];
 }
 
 interface CapacityGridRow {
@@ -429,6 +439,26 @@ const diasSemana = [
   { label: 'Dom', value: 6 },
 ];
 
+const recorrencias: { value: RecorrenciaTipo; label: string }[] = [
+  { value: 'semanal', label: 'Semanal' },
+  { value: 'quinzenal', label: 'Quinzenal (semana sim/não)' },
+  { value: 'mensal_posicional', label: 'Mensal (n-ésima/última)' },
+  { value: 'eventual', label: 'Eventual (datas avulsas)' },
+];
+
+const posicoesMensais = [
+  { value: 1, label: '1ª' },
+  { value: 2, label: '2ª' },
+  { value: 3, label: '3ª' },
+  { value: 4, label: '4ª' },
+  { value: -1, label: 'Última' },
+];
+
+const offsetsQuinzenais = [
+  { value: 0, label: 'Esta semana' },
+  { value: 1, label: 'Próxima semana' },
+];
+
 const classificacoes = [
   { value: 'estagiaria', label: 'Estagiária', badgeClass: 'badge-estagiaria' },
   { value: 'mei', label: 'MEI', badgeClass: 'badge-mei' },
@@ -717,9 +747,23 @@ async function createCapacidadeSala(
   payload: Partial<CapacidadeSala>,
 ): Promise<CapacidadeSala> {
   const csrf = await ensureCsrf();
+  const recorrencia = payload.recorrencia_tipo ?? 'semanal';
+  const normalized = {
+    data_especial: null,
+    restricoes: '',
+    recorrencia_tipo: recorrencia,
+    quinzenal_offset:
+      recorrencia === 'quinzenal' ? (payload.quinzenal_offset ?? 0) : null,
+    posicao_no_mes:
+      recorrencia === 'mensal_posicional'
+        ? (payload.posicao_no_mes ?? 1)
+        : null,
+    eventos: payload.eventos ?? [],
+    ...payload,
+  };
   return apiJson<CapacidadeSala>('/api/cadastros/capacidade-salas/', {
     method: 'POST',
-    body: JSON.stringify({ data_especial: null, restricoes: '', ...payload }),
+    body: JSON.stringify(normalized),
     headers: { 'X-CSRFToken': csrf },
   });
 }
@@ -729,9 +773,23 @@ async function updateCapacidadeSala(
   payload: Partial<CapacidadeSala>,
 ): Promise<CapacidadeSala> {
   const csrf = await ensureCsrf();
+  const recorrencia = payload.recorrencia_tipo ?? 'semanal';
+  const normalized = {
+    data_especial: null,
+    restricoes: '',
+    recorrencia_tipo: recorrencia,
+    quinzenal_offset:
+      recorrencia === 'quinzenal' ? (payload.quinzenal_offset ?? 0) : null,
+    posicao_no_mes:
+      recorrencia === 'mensal_posicional'
+        ? (payload.posicao_no_mes ?? 1)
+        : null,
+    eventos: payload.eventos ?? [],
+    ...payload,
+  };
   return apiJson<CapacidadeSala>(`/api/cadastros/capacidade-salas/${id}/`, {
     method: 'PATCH',
-    body: JSON.stringify({ data_especial: null, restricoes: '', ...payload }),
+    body: JSON.stringify(normalized),
     headers: { 'X-CSRFToken': csrf },
   });
 }
@@ -753,13 +811,27 @@ async function deleteLocal(id: number): Promise<void> {
 }
 
 async function fetchCapacidades(): Promise<CapacidadeSala[]> {
-  return apiJson<CapacidadeSala[]>(
+  const data = await apiJson<CapacidadeSala[]>(
     '/api/cadastros/capacidade-salas/',
     undefined,
     {
       expectArray: true,
     },
   );
+  return data.map((item) => ({
+    ...item,
+    recorrencia_tipo: item.recorrencia_tipo ?? 'semanal',
+    quinzenal_offset:
+      item.recorrencia_tipo === 'quinzenal'
+        ? (item.quinzenal_offset ?? 0)
+        : (item.quinzenal_offset ?? null),
+    posicao_no_mes:
+      item.recorrencia_tipo === 'mensal_posicional'
+        ? (item.posicao_no_mes ?? 1)
+        : (item.posicao_no_mes ?? null),
+    eventos: item.eventos ?? [],
+    dia_semana: item.dia_semana ?? null,
+  }));
 }
 
 async function fetchProfissionais(): Promise<ProfissionalCadastro[]> {
@@ -1933,6 +2005,7 @@ function LocaisPage() {
   });
   const [salaForm, setSalaForm] = useState({ local: 0, nome: '' });
   const [capTargetSala, setCapTargetSala] = useState<Sala | null>(null);
+  const [showAdvancedModal, setShowAdvancedModal] = useState(false);
   const [expandedLocais, setExpandedLocais] = useState<Set<number>>(new Set());
   const [showLocalModal, setShowLocalModal] = useState(false);
   const [showSalaModal, setShowSalaModal] = useState(false);
@@ -1943,6 +2016,27 @@ function LocaisPage() {
   const [capacityGrid, setCapacityGrid] = useState<CapacityGridRow[]>(
     diasSemana.map((dia) => ({ dia_semana: dia.value, manha: '', tarde: '' })),
   );
+  const [advancedCapacityForm, setAdvancedCapacityForm] = useState<{
+    id: number | null;
+    sala: number | null;
+    turno: string;
+    dia_semana: number;
+    capacidade: number;
+    recorrencia_tipo: RecorrenciaTipo;
+    quinzenal_offset: number;
+    posicao_no_mes: number;
+    eventos: string;
+  }>({
+    id: null,
+    sala: null,
+    turno: 'manha',
+    dia_semana: 0,
+    capacidade: 1,
+    recorrencia_tipo: 'semanal',
+    quinzenal_offset: 0,
+    posicao_no_mes: 1,
+    eventos: '',
+  });
 
   const loadData = useCallback(async () => {
     setError(null);
@@ -1977,6 +2071,32 @@ function LocaisPage() {
   useEffect(() => {
     void loadData();
   }, [loadData]);
+
+  const targetSalaId = capTargetSala?.id ?? salas[0]?.id ?? null;
+  const advancedSalaId = advancedCapacityForm.sala ?? targetSalaId;
+
+  useEffect(() => {
+    setAdvancedCapacityForm((prev) => ({
+      ...prev,
+      sala: targetSalaId ?? prev.sala ?? null,
+    }));
+  }, [targetSalaId]);
+
+  const capacidadesSemanais = useMemo(
+    () => capacidades.filter((cap) => cap.recorrencia_tipo === 'semanal'),
+    [capacidades],
+  );
+  const capacidadesAvancadas = useMemo(
+    () => capacidades.filter((cap) => cap.recorrencia_tipo !== 'semanal'),
+    [capacidades],
+  );
+  const capacidadesAvancadasDaSala = useMemo(
+    () =>
+      capacidadesAvancadas.filter((cap) =>
+        advancedSalaId ? cap.sala === advancedSalaId : true,
+      ),
+    [advancedSalaId, capacidadesAvancadas],
+  );
 
   const handleLocalSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -2132,6 +2252,89 @@ function LocaisPage() {
     }
   };
 
+  const handleAdvancedCapSubmit = async (event: FormEvent) => {
+    event.preventDefault();
+    const alvoSala =
+      advancedCapacityForm.sala ?? capTargetSala?.id ?? salas[0]?.id ?? null;
+    if (!alvoSala) {
+      setError('Selecione uma sala para registrar capacidade.');
+      return;
+    }
+    setError(null);
+    setSuccess(null);
+    const eventosList =
+      advancedCapacityForm.recorrencia_tipo === 'eventual'
+        ? parseEventosInput(advancedCapacityForm.eventos)
+        : [];
+    if (
+      advancedCapacityForm.recorrencia_tipo === 'eventual' &&
+      eventosList.length === 0
+    ) {
+      setError('Informe ao menos uma data para recorrências eventuais.');
+      return;
+    }
+    const payload: Partial<CapacidadeSala> = {
+      sala: alvoSala,
+      turno: advancedCapacityForm.turno,
+      capacidade: advancedCapacityForm.capacidade,
+      dia_semana:
+        advancedCapacityForm.recorrencia_tipo === 'eventual'
+          ? null
+          : advancedCapacityForm.dia_semana,
+      recorrencia_tipo: advancedCapacityForm.recorrencia_tipo,
+      quinzenal_offset:
+        advancedCapacityForm.recorrencia_tipo === 'quinzenal'
+          ? advancedCapacityForm.quinzenal_offset
+          : null,
+      posicao_no_mes:
+        advancedCapacityForm.recorrencia_tipo === 'mensal_posicional'
+          ? advancedCapacityForm.posicao_no_mes
+          : null,
+      eventos: eventosList,
+    };
+
+    try {
+      if (advancedCapacityForm.id) {
+        await updateCapacidadeSala(advancedCapacityForm.id, payload);
+        setSuccess('Capacidade atualizada.');
+      } else {
+        await createCapacidadeSala(payload);
+        setSuccess('Capacidade registrada.');
+      }
+      const capacidadesAtualizadas = await fetchCapacidades();
+      setCapacidades(capacidadesAtualizadas);
+      resetAdvancedForm(alvoSala);
+    } catch (exception) {
+      const message =
+        exception instanceof Error
+          ? exception.message
+          : 'Erro ao salvar capacidade avançada.';
+      setError(message);
+    }
+  };
+
+  const handleEditAdvancedCap = (capacidade: CapacidadeSala) => {
+    setAdvancedCapacityForm({
+      id: capacidade.id,
+      sala: capacidade.sala,
+      turno: capacidade.turno,
+      dia_semana: capacidade.dia_semana ?? 0,
+      capacidade: capacidade.capacidade,
+      recorrencia_tipo: capacidade.recorrencia_tipo,
+      quinzenal_offset: capacidade.quinzenal_offset ?? 0,
+      posicao_no_mes: capacidade.posicao_no_mes ?? 1,
+      eventos: (capacidade.eventos ?? []).join(', '),
+    });
+    setShowAdvancedModal(true);
+  };
+
+  const openAdvancedModal = (salaId?: number | null) => {
+    if (salaId !== undefined) {
+      resetAdvancedForm(salaId);
+    }
+    setShowAdvancedModal(true);
+  };
+
   const salasPorLocal = useMemo(() => {
     const mapping: Record<number, Sala[]> = {};
     salas.forEach((sala) => {
@@ -2167,21 +2370,21 @@ function LocaisPage() {
   );
   const capacidadeSalvaSemana = useMemo(
     () =>
-      capacidades
+      capacidadesSemanais
         .filter((item) => item.sala === (capTargetSala?.id ?? 0))
         .reduce((total, item) => total + (item.capacidade || 0), 0),
-    [capTargetSala?.id, capacidades],
+    [capTargetSala?.id, capacidadesSemanais],
   );
   const capacidadesByKey = useMemo(() => {
     const map: Record<string, CapacidadeSala> = {};
-    capacidades
+    capacidadesSemanais
       .filter((item) => item.sala === (capTargetSala?.id ?? 0))
       .forEach((item) => {
         const key = `${item.dia_semana}-${item.turno}`;
         map[key] = item;
       });
     return map;
-  }, [capTargetSala?.id, capacidades]);
+  }, [capTargetSala?.id, capacidadesSemanais]);
 
   const fillDefaultCapacity = () => {
     setCapacityGrid(
@@ -2203,9 +2406,60 @@ function LocaisPage() {
     );
   };
 
+  const parseEventosInput = (raw: string): string[] =>
+    raw
+      .split(/[\n,;]+/u)
+      .map((item) => item.trim())
+      .filter(Boolean);
+
+  const resetAdvancedForm = (salaId?: number | null) =>
+    setAdvancedCapacityForm({
+      id: null,
+      sala: salaId ?? capTargetSala?.id ?? salas[0]?.id ?? null,
+      turno: 'manha',
+      dia_semana: 0,
+      capacidade: 1,
+      recorrencia_tipo: 'semanal',
+      quinzenal_offset: 0,
+      posicao_no_mes: 1,
+      eventos: '',
+    });
+
+  const descricaoRecorrencia = (cap: CapacidadeSala): string => {
+    if (cap.recorrencia_tipo === 'quinzenal') {
+      const dia = diasSemana.find(
+        (diaSemana) => diaSemana.value === cap.dia_semana,
+      );
+      return `${cap.quinzenal_offset === 0 ? 'Esta' : 'Próxima'} semana · ${
+        dia?.label ?? '?'
+      }`;
+    }
+    if (cap.recorrencia_tipo === 'mensal_posicional') {
+      const dia = diasSemana.find(
+        (diaSemana) => diaSemana.value === cap.dia_semana,
+      );
+      const posicao = posicoesMensais.find(
+        (item) => item.value === (cap.posicao_no_mes ?? undefined),
+      );
+      return `${posicao?.label ?? '?ª'} ${dia?.label ?? ''}`.trim();
+    }
+    if (cap.recorrencia_tipo === 'eventual') {
+      const datas = cap.eventos ?? [];
+      return datas.length
+        ? `${datas.length} data${datas.length > 1 ? 's' : ''}`
+        : 'Eventual';
+    }
+    const dia = diasSemana.find(
+      (diaSemana) => diaSemana.value === cap.dia_semana,
+    );
+    return dia?.label ?? 'Sem dia';
+  };
+
   const resumoGlobal = useMemo(() => {
     const totalPorDia = diasSemana.map((dia) => {
-      const capsDia = capacidades.filter((cap) => cap.dia_semana === dia.value);
+      const capsDia = capacidadesSemanais.filter(
+        (cap) => cap.dia_semana === dia.value,
+      );
       const manha = capsDia
         .filter((cap) => cap.turno === 'manha')
         .reduce((total, cap) => total + (cap.capacidade || 0), 0);
@@ -2219,7 +2473,7 @@ function LocaisPage() {
       0,
     );
     return { totalPorDia, totalSemanal };
-  }, [capacidades]);
+  }, [capacidadesSemanais]);
 
   return (
     <section className='panel'>
@@ -2301,7 +2555,7 @@ function LocaisPage() {
         <div className='local-list'>
           {locais.map((local) => {
             const salasDoLocal = salasPorLocal[local.id] || [];
-            const totalLocal = capacidades
+            const totalLocal = capacidadesSemanais
               .filter((cap) =>
                 salasDoLocal.some((sala) => sala.id === cap.sala),
               )
@@ -2401,7 +2655,7 @@ function LocaisPage() {
                     <div className='sala-list__header'>
                       <div className='dia-summary local-summary'>
                         {diasSemana.map((dia) => {
-                          const totalDiaLocal = capacidades
+                          const totalDiaLocal = capacidadesSemanais
                             .filter(
                               (cap) =>
                                 (salasPorLocal[local.id] || []).some(
@@ -2486,7 +2740,7 @@ function LocaisPage() {
                     {expandedLocais.has(local.id) && salasDoLocal.length
                       ? salasDoLocal.map((sala) => {
                           const resumoDias = diasSemana.map((dia) => {
-                            const totalDia = capacidades
+                            const totalDia = capacidadesSemanais
                               .filter(
                                 (cap) =>
                                   cap.sala === sala.id &&
@@ -2589,18 +2843,20 @@ function LocaisPage() {
                                     setShowCapModal(true);
                                     setCapacityGrid(
                                       diasSemana.map((dia) => {
-                                        const manhaExistente = capacidades.find(
-                                          (cap) =>
-                                            cap.sala === sala.id &&
-                                            cap.dia_semana === dia.value &&
-                                            cap.turno === 'manha',
-                                        );
-                                        const tardeExistente = capacidades.find(
-                                          (cap) =>
-                                            cap.sala === sala.id &&
-                                            cap.dia_semana === dia.value &&
-                                            cap.turno === 'tarde',
-                                        );
+                                        const manhaExistente =
+                                          capacidadesSemanais.find(
+                                            (cap) =>
+                                              cap.sala === sala.id &&
+                                              cap.dia_semana === dia.value &&
+                                              cap.turno === 'manha',
+                                          );
+                                        const tardeExistente =
+                                          capacidadesSemanais.find(
+                                            (cap) =>
+                                              cap.sala === sala.id &&
+                                              cap.dia_semana === dia.value &&
+                                              cap.turno === 'tarde',
+                                          );
                                         return {
                                           dia_semana: dia.value,
                                           manha: manhaExistente
@@ -2618,7 +2874,14 @@ function LocaisPage() {
                                     );
                                   }}
                                 >
-                                  📊 Capacidade
+                                  📊 Semana
+                                </button>
+                                <button
+                                  className='ghost-button small soft'
+                                  type='button'
+                                  onClick={() => openAdvancedModal(sala.id)}
+                                >
+                                  🔁 Recorrência
                                 </button>
                               </div>
                             </div>
@@ -2656,8 +2919,8 @@ function LocaisPage() {
             Marque disponibilidade.
           </li>
           <li>
-            Data especial na capacidade cobre exceções (feriados, manutenções,
-            reforços pontuais).
+            Datas eventuais cobrem exceções (feriados, manutenções, reforços
+            pontuais) e podem ser múltiplas.
           </li>
           <li>
             Esses cadastros alimentam a geração de escala e a detecção de gaps
@@ -2957,6 +3220,256 @@ function LocaisPage() {
             </button>
           </div>
         </form>
+      </Modal>
+
+      <Modal
+        open={showAdvancedModal}
+        onClose={() => {
+          setShowAdvancedModal(false);
+          resetAdvancedForm(advancedSalaId);
+        }}
+        title='Capacidades não semanais'
+        description='Quinzenal, mensal posicional ou datas eventuais. A capacidade semanal continua no modal principal.'
+      >
+        <form
+          className='account-form capacity-advanced-form'
+          onSubmit={handleAdvancedCapSubmit}
+        >
+          <div className='two-cols'>
+            <label className='field'>
+              <span>Sala</span>
+              <select
+                value={advancedCapacityForm.sala ?? ''}
+                onChange={(event) =>
+                  setAdvancedCapacityForm({
+                    ...advancedCapacityForm,
+                    sala: Number(event.target.value),
+                  })
+                }
+                required
+              >
+                <option value='' disabled>
+                  Selecione
+                </option>
+                {salas.map((sala) => (
+                  <option key={sala.id} value={sala.id}>
+                    {getSalaLabel(sala, locaisById)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className='field'>
+              <span>Turno</span>
+              <select
+                value={advancedCapacityForm.turno}
+                onChange={(event) =>
+                  setAdvancedCapacityForm({
+                    ...advancedCapacityForm,
+                    turno: event.target.value,
+                  })
+                }
+              >
+                <option value='manha'>Manhã</option>
+                <option value='tarde'>Tarde</option>
+              </select>
+            </label>
+          </div>
+          <div className='two-cols'>
+            <label className='field'>
+              <span>Recorrência</span>
+              <select
+                value={advancedCapacityForm.recorrencia_tipo}
+                onChange={(event) =>
+                  setAdvancedCapacityForm({
+                    ...advancedCapacityForm,
+                    recorrencia_tipo: event.target.value as RecorrenciaTipo,
+                  })
+                }
+              >
+                {recorrencias.map((rec) => (
+                  <option key={rec.value} value={rec.value}>
+                    {rec.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {advancedCapacityForm.recorrencia_tipo !== 'eventual' ? (
+              <label className='field'>
+                <span>Dia da semana</span>
+                <select
+                  value={advancedCapacityForm.dia_semana}
+                  onChange={(event) =>
+                    setAdvancedCapacityForm({
+                      ...advancedCapacityForm,
+                      dia_semana: Number(event.target.value),
+                    })
+                  }
+                >
+                  {diasSemana.map((dia) => (
+                    <option key={dia.value} value={dia.value}>
+                      {dia.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
+          </div>
+          {advancedCapacityForm.recorrencia_tipo === 'quinzenal' ? (
+            <label className='field'>
+              <span>Offset quinzenal</span>
+              <select
+                value={advancedCapacityForm.quinzenal_offset}
+                onChange={(event) =>
+                  setAdvancedCapacityForm({
+                    ...advancedCapacityForm,
+                    quinzenal_offset: Number(event.target.value),
+                  })
+                }
+              >
+                {offsetsQuinzenais.map((offset) => (
+                  <option key={offset.value} value={offset.value}>
+                    {offset.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
+          {advancedCapacityForm.recorrencia_tipo === 'mensal_posicional' ? (
+            <label className='field'>
+              <span>Posição no mês</span>
+              <select
+                value={advancedCapacityForm.posicao_no_mes}
+                onChange={(event) =>
+                  setAdvancedCapacityForm({
+                    ...advancedCapacityForm,
+                    posicao_no_mes: Number(event.target.value),
+                  })
+                }
+              >
+                {posicoesMensais.map((posicao) => (
+                  <option key={posicao.value} value={posicao.value}>
+                    {posicao.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
+          {advancedCapacityForm.recorrencia_tipo === 'eventual' ? (
+            <label className='field'>
+              <span>Datas eventuais (AAAA-MM-DD)</span>
+              <textarea
+                rows={2}
+                value={advancedCapacityForm.eventos}
+                onChange={(event) =>
+                  setAdvancedCapacityForm({
+                    ...advancedCapacityForm,
+                    eventos: event.target.value,
+                  })
+                }
+                placeholder='Separe por vírgula ou quebra de linha (ex.: 2025-05-03, 2025-10-18)'
+              />
+            </label>
+          ) : null}
+          <div className='two-cols'>
+            <label className='field'>
+              <span>Capacidade</span>
+              <input
+                type='number'
+                min={1}
+                value={advancedCapacityForm.capacidade}
+                onChange={(event) =>
+                  setAdvancedCapacityForm({
+                    ...advancedCapacityForm,
+                    capacidade: Number(event.target.value),
+                  })
+                }
+                required
+              />
+            </label>
+            <div className='field checkbox-field'>
+              <button className='primary-button' type='submit'>
+                {advancedCapacityForm.id
+                  ? 'Atualizar capacidade'
+                  : 'Salvar capacidade'}
+              </button>
+            </div>
+          </div>
+          <div className='capacity-legend'>
+            <div className='capacity-copy'>
+              <p className='muted small-print'>
+                Lista apenas recorrências não semanais da sala selecionada.
+              </p>
+            </div>
+            <button
+              className='ghost-button small soft'
+              type='button'
+              onClick={() => resetAdvancedForm(advancedSalaId)}
+            >
+              ↺ Limpar formulário
+            </button>
+          </div>
+        </form>
+        <div className='advanced-list'>
+          <p className='muted small-print'>
+            {capacidadesAvancadasDaSala.length
+              ? 'Regras avançadas desta sala.'
+              : 'Nenhuma recorrência avançada cadastrada.'}
+          </p>
+          {capacidadesAvancadasDaSala.map((capacidade) => (
+            <div key={capacidade.id} className='advanced-item'>
+              <div>
+                <strong>
+                  {capacidade.turno === 'manha' ? 'Manhã' : 'Tarde'} ·{' '}
+                  {capacidade.capacidade} turno(s)
+                </strong>
+                <p className='muted small-print'>
+                  {capacidade.recorrencia_tipo === 'eventual'
+                    ? 'Eventual'
+                    : capacidade.recorrencia_tipo === 'quinzenal'
+                      ? 'Quinzenal'
+                      : capacidade.recorrencia_tipo === 'mensal_posicional'
+                        ? 'Mensal posicional'
+                        : 'Semanal'}{' '}
+                  · {descricaoRecorrencia(capacidade)}
+                </p>
+                {capacidade.eventos && capacidade.eventos.length ? (
+                  <p className='muted small-print'>
+                    Datas: {(capacidade.eventos ?? []).join(', ')}
+                  </p>
+                ) : null}
+              </div>
+              <div className='sala-actions'>
+                <button
+                  className='ghost-button small soft'
+                  type='button'
+                  onClick={() => handleEditAdvancedCap(capacidade)}
+                >
+                  ✏️ Editar
+                </button>
+                <button
+                  className='ghost-button small danger'
+                  type='button'
+                  onClick={async () => {
+                    try {
+                      await deleteCapacidadeSala(capacidade.id);
+                      const capacidadesAtualizadas = await fetchCapacidades();
+                      setCapacidades(capacidadesAtualizadas);
+                      setSuccess('Capacidade removida.');
+                    } catch (exception) {
+                      const message =
+                        exception instanceof Error
+                          ? exception.message
+                          : 'Erro ao remover capacidade.';
+                      setError(message);
+                    }
+                  }}
+                >
+                  Remover
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
       </Modal>
     </section>
   );

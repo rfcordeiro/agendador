@@ -9,11 +9,13 @@ from rest_framework import serializers
 
 from .models import (
     CapacidadeSala,
+    CapacidadeSalaEvento,
     ClassificacaoProfissional,
     DiaSemana,
     Local,
     PremissasGlobais,
     Profissional,
+    RecorrenciaCapacidade,
     Sala,
     TurnoChoices,
 )
@@ -66,6 +68,14 @@ class SalaSerializer(serializers.ModelSerializer):
 
 
 class CapacidadeSalaSerializer(serializers.ModelSerializer):
+    eventos = serializers.ListField(
+        child=serializers.DateField(format="%Y-%m-%d"),
+        required=False,
+        allow_empty=True,
+        write_only=True,
+    )
+    eventos_read = serializers.SerializerMethodField(read_only=True)
+
     class Meta:
         model = CapacidadeSala
         fields = [
@@ -76,6 +86,11 @@ class CapacidadeSalaSerializer(serializers.ModelSerializer):
             "capacidade",
             "restricoes",
             "data_especial",
+            "recorrencia_tipo",
+            "quinzenal_offset",
+            "posicao_no_mes",
+            "eventos",
+            "eventos_read",
             "created_at",
             "updated_at",
         ]
@@ -83,6 +98,9 @@ class CapacidadeSalaSerializer(serializers.ModelSerializer):
         extra_kwargs = {
             "data_especial": {"required": False, "allow_null": True},
             "restricoes": {"required": False, "allow_blank": True},
+            "quinzenal_offset": {"required": False, "allow_null": True},
+            "posicao_no_mes": {"required": False, "allow_null": True},
+            "recorrencia_tipo": {"required": False},
         }
 
     def validate_capacidade(self, value: int) -> int:
@@ -90,11 +108,107 @@ class CapacidadeSalaSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Capacidade deve ser pelo menos 1.")
         return value
 
-    def validate_dia_semana(self, value: int) -> int:
+    def validate_dia_semana(self, value: int | None) -> int | None:
+        if value is None:
+            return None
         dias_validos = {choice.value for choice in DiaSemana}
         if value not in dias_validos:
             raise serializers.ValidationError("Dia da semana inválido.")
         return value
+
+    def validate(self, attrs: dict[str, Any]) -> dict[str, Any]:
+        tipo = attrs.get(
+            "recorrencia_tipo",
+            getattr(self.instance, "recorrencia_tipo", RecorrenciaCapacidade.SEMANAL),
+        )
+        dia_semana = attrs.get("dia_semana", getattr(self.instance, "dia_semana", None))
+        eventos = attrs.get("eventos")
+        data_especial = attrs.get("data_especial")
+
+        if data_especial:
+            eventos = (eventos or []) + [data_especial]
+            attrs["data_especial"] = None
+
+        if tipo in (
+            RecorrenciaCapacidade.SEMANAL,
+            RecorrenciaCapacidade.QUINZENAL,
+            RecorrenciaCapacidade.MENSAL_POSICIONAL,
+        ):
+            if dia_semana is None:
+                raise serializers.ValidationError(
+                    "Dia da semana é obrigatório para recorrência semanal, quinzenal ou mensal."
+                )
+        else:
+            attrs["dia_semana"] = None
+
+        if tipo == RecorrenciaCapacidade.QUINZENAL:
+            offset = attrs.get(
+                "quinzenal_offset",
+                getattr(self.instance, "quinzenal_offset", None),
+            )
+            if offset not in (0, 1):
+                raise serializers.ValidationError(
+                    "Recorrência quinzenal exige offset 0 (esta semana) ou 1 (próxima semana)."
+                )
+        else:
+            attrs["quinzenal_offset"] = None
+
+        if tipo == RecorrenciaCapacidade.MENSAL_POSICIONAL:
+            posicao = attrs.get("posicao_no_mes", getattr(self.instance, "posicao_no_mes", None))
+            if posicao not in (1, 2, 3, 4, -1):
+                raise serializers.ValidationError(
+                    "Posição do mês deve ser 1, 2, 3, 4 ou -1 (último)."
+                )
+        else:
+            attrs["posicao_no_mes"] = None
+
+        if tipo == RecorrenciaCapacidade.EVENTUAL:
+            if eventos is None:
+                eventos = []
+            if not eventos:
+                raise serializers.ValidationError(
+                    "Informe pelo menos uma data para recorrência eventual."
+                )
+            attrs["eventos"] = eventos
+        return attrs
+
+    def _replace_eventos(self, instance: CapacidadeSala, eventos: list[Any] | None) -> None:
+        CapacidadeSalaEvento.objects.filter(capacidade=instance).delete()
+        if not eventos:
+            return
+        datas = []
+        for data in eventos:
+            if data:
+                datas.append(str(data))
+
+        novos = [
+            CapacidadeSalaEvento(capacidade=instance, data=data) for data in sorted(set(datas))
+        ]
+        CapacidadeSalaEvento.objects.bulk_create(novos)
+
+    def create(self, validated_data: dict[str, Any]) -> CapacidadeSala:
+        eventos = validated_data.pop("eventos", [])
+        instance = super().create(validated_data)
+        self._replace_eventos(instance, eventos)
+        return instance
+
+    def update(self, instance: CapacidadeSala, validated_data: dict[str, Any]) -> CapacidadeSala:
+        eventos = validated_data.pop("eventos", None)
+        instance = super().update(instance, validated_data)
+        if eventos is not None:
+            self._replace_eventos(instance, eventos)
+        return instance
+
+    def to_representation(self, instance: CapacidadeSala) -> dict[str, Any]:
+        data = super().to_representation(instance)
+        data["eventos"] = data.pop("eventos_read", [])
+        return data
+
+    def get_eventos_read(self, instance: CapacidadeSala) -> list[str]:
+        eventos_qs = getattr(instance, "eventos", None)
+        if eventos_qs is None:
+            return []
+        return [evento.data.isoformat() for evento in eventos_qs.all()]
 
 
 class ProfissionalSerializer(serializers.ModelSerializer):
@@ -214,7 +328,6 @@ class ProfissionalSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError("MEI/Freelancer usa diária, não salário.")
             if valor_diaria is None:
                 raise serializers.ValidationError("Informe o valor da diária.")
-        return attrs
         return attrs
 
     @transaction.atomic

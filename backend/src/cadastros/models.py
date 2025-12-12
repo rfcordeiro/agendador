@@ -10,6 +10,13 @@ class TurnoChoices(models.TextChoices):
     TARDE = "tarde", _("Tarde")
 
 
+class RecorrenciaCapacidade(models.TextChoices):
+    SEMANAL = "semanal", _("Semanal")
+    QUINZENAL = "quinzenal", _("Quinzenal (semana sim/não)")
+    MENSAL_POSICIONAL = "mensal_posicional", _("Mensal (n-ésima/última)")
+    EVENTUAL = "eventual", _("Eventual (datas avulsas)")
+
+
 class ClassificacaoProfissional(models.TextChoices):
     ESTAGIARIA = "estagiaria", _("Estagiária")
     MEI = "mei", _("MEI")
@@ -157,22 +164,107 @@ class Sala(models.Model):
 
 class CapacidadeSala(models.Model):
     sala = models.ForeignKey(Sala, on_delete=models.CASCADE, related_name="capacidades")
-    dia_semana = models.PositiveSmallIntegerField(choices=DiaSemana.choices)
+    dia_semana = models.PositiveSmallIntegerField(
+        choices=DiaSemana.choices,
+        null=True,
+        blank=True,
+        help_text="Obrigatório para recorrências semanais/quinzenais/mensais.",
+    )
     turno = models.CharField(max_length=12, choices=TurnoChoices.choices)
     capacidade = models.PositiveSmallIntegerField(default=1)
     restricoes = models.TextField(blank=True)
-    data_especial = models.DateField(null=True, blank=True)
+    data_especial = models.DateField(
+        null=True,
+        blank=True,
+        help_text="Legado: use eventos para datas avulsas.",
+    )
+    recorrencia_tipo = models.CharField(
+        max_length=24,
+        choices=RecorrenciaCapacidade.choices,
+        default=RecorrenciaCapacidade.SEMANAL,
+    )
+    quinzenal_offset = models.PositiveSmallIntegerField(
+        null=True,
+        blank=True,
+        help_text="0 = semana atual, 1 = próxima; apenas para recorrência quinzenal.",
+    )
+    posicao_no_mes = models.SmallIntegerField(
+        null=True,
+        blank=True,
+        help_text="1-4 ou -1 (último) para recorrência mensal posicional.",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        unique_together = ("sala", "dia_semana", "turno", "data_especial")
+        constraints = [
+            models.UniqueConstraint(
+                fields=["sala", "dia_semana", "turno"],
+                condition=models.Q(
+                    recorrencia_tipo=RecorrenciaCapacidade.SEMANAL,
+                    data_especial__isnull=True,
+                ),
+                name="unica_capacidade_semanal",
+            ),
+            models.UniqueConstraint(
+                fields=["sala", "dia_semana", "turno", "quinzenal_offset"],
+                condition=models.Q(
+                    recorrencia_tipo=RecorrenciaCapacidade.QUINZENAL,
+                    data_especial__isnull=True,
+                ),
+                name="unica_capacidade_quinzenal",
+            ),
+            models.UniqueConstraint(
+                fields=["sala", "dia_semana", "turno", "posicao_no_mes"],
+                condition=models.Q(
+                    recorrencia_tipo=RecorrenciaCapacidade.MENSAL_POSICIONAL,
+                    data_especial__isnull=True,
+                ),
+                name="unica_capacidade_mensal_posicional",
+            ),
+            models.UniqueConstraint(
+                fields=["sala", "turno"],
+                condition=models.Q(
+                    recorrencia_tipo=RecorrenciaCapacidade.EVENTUAL,
+                    data_especial__isnull=True,
+                ),
+                name="unica_capacidade_eventual_por_turno",
+            ),
+            models.UniqueConstraint(
+                fields=["sala", "dia_semana", "turno", "data_especial"],
+                condition=models.Q(data_especial__isnull=False),
+                name="unica_capacidade_data_especial",
+            ),
+        ]
         ordering = ["sala__local__nome", "sala__nome", "dia_semana", "turno"]
 
     def __str__(self) -> str:
         dia = self.get_dia_semana_display()
         turno = self.get_turno_display()
+        if self.recorrencia_tipo == RecorrenciaCapacidade.EVENTUAL:
+            return f"{self.sala} - Eventos ({turno})"
         return f"{self.sala} - {dia} ({turno})"
+
+
+class CapacidadeSalaEvento(models.Model):
+    capacidade = models.ForeignKey(
+        "cadastros.CapacidadeSala",
+        on_delete=models.CASCADE,
+        related_name="eventos",
+    )
+    data = models.DateField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["capacidade", "data"], name="unica_data_eventual_por_capacidade"
+            )
+        ]
+        ordering = ["data"]
+
+    def __str__(self) -> str:
+        return f"{self.data} ({self.capacidade})"
 
 
 class PremissasGlobais(models.Model):
