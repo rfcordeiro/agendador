@@ -28,22 +28,30 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name="local",
             name="manha_inicio",
-            field=models.TimeField(default=time(8, 0), help_text="Início do turno da manhã."),
+            field=models.TimeField(
+                default=time(8, 0), help_text="Início do turno da manhã."
+            ),
         ),
         migrations.AddField(
             model_name="local",
             name="manha_fim",
-            field=models.TimeField(default=time(14, 0), help_text="Fim do turno da manhã."),
+            field=models.TimeField(
+                default=time(14, 0), help_text="Fim do turno da manhã."
+            ),
         ),
         migrations.AddField(
             model_name="local",
             name="tarde_inicio",
-            field=models.TimeField(default=time(14, 0), help_text="Início do turno da tarde."),
+            field=models.TimeField(
+                default=time(14, 0), help_text="Início do turno da tarde."
+            ),
         ),
         migrations.AddField(
             model_name="local",
             name="tarde_fim",
-            field=models.TimeField(default=time(20, 0), help_text="Fim do turno da tarde."),
+            field=models.TimeField(
+                default=time(20, 0), help_text="Fim do turno da tarde."
+            ),
         ),
         migrations.AddField(
             model_name="local",

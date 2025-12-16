@@ -15,7 +15,9 @@ from rest_framework.test import APIClient
 @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
 def test_password_reset_sends_email_when_user_exists() -> None:
     cache.clear()
-    User.objects.create_user(username="alice", email="alice@example.com", password="secret123")  # noqa: S106
+    User.objects.create_user(
+        username="alice", email="alice@example.com", password="secret123"
+    )  # noqa: S106
     client = APIClient()
 
     response = client.post(
@@ -126,7 +128,9 @@ def test_password_reset_confirm_rejects_invalid_token() -> None:
 )
 def test_password_reset_throttles_multiple_requests() -> None:
     cache.clear()
-    User.objects.create_user(username="bruno", email="bruno@example.com", password="secret123")  # noqa: S106
+    User.objects.create_user(
+        username="bruno", email="bruno@example.com", password="secret123"
+    )  # noqa: S106
     client = APIClient()
 
     first = client.post(

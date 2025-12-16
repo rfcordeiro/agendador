@@ -4,20 +4,32 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('cadastros', '0005_capacidades_recorrencia'),
+        ("cadastros", "0005_capacidades_recorrencia"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='capacidadesala',
-            name='data_especial',
-            field=models.DateField(blank=True, help_text='Legado: use eventos para datas avulsas.', null=True),
+            model_name="capacidadesala",
+            name="data_especial",
+            field=models.DateField(
+                blank=True,
+                help_text="Legado: use eventos para datas avulsas.",
+                null=True,
+            ),
         ),
         migrations.AlterField(
-            model_name='capacidadesala',
-            name='recorrencia_tipo',
-            field=models.CharField(choices=[('semanal', 'Semanal'), ('quinzenal', 'Quinzenal (semana sim/não)'), ('mensal_posicional', 'Mensal (n-ésima/última)'), ('eventual', 'Eventual (datas avulsas)')], default='semanal', max_length=24),
+            model_name="capacidadesala",
+            name="recorrencia_tipo",
+            field=models.CharField(
+                choices=[
+                    ("semanal", "Semanal"),
+                    ("quinzenal", "Quinzenal (semana sim/não)"),
+                    ("mensal_posicional", "Mensal (n-ésima/última)"),
+                    ("eventual", "Eventual (datas avulsas)"),
+                ],
+                default="semanal",
+                max_length=24,
+            ),
         ),
     ]

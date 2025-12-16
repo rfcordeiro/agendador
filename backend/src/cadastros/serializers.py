@@ -59,11 +59,17 @@ class LocalSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs: dict[str, Any]) -> dict[str, Any]:
         instance = self.instance
-        manha_inicio = attrs.get("manha_inicio", getattr(instance, "manha_inicio", None))
+        manha_inicio = attrs.get(
+            "manha_inicio", getattr(instance, "manha_inicio", None)
+        )
         manha_fim = attrs.get("manha_fim", getattr(instance, "manha_fim", None))
-        tarde_inicio = attrs.get("tarde_inicio", getattr(instance, "tarde_inicio", None))
+        tarde_inicio = attrs.get(
+            "tarde_inicio", getattr(instance, "tarde_inicio", None)
+        )
         tarde_fim = attrs.get("tarde_fim", getattr(instance, "tarde_fim", None))
-        sabado_inicio = attrs.get("sabado_inicio", getattr(instance, "sabado_inicio", None))
+        sabado_inicio = attrs.get(
+            "sabado_inicio", getattr(instance, "sabado_inicio", None)
+        )
         sabado_fim = attrs.get("sabado_fim", getattr(instance, "sabado_fim", None))
 
         errors: dict[str, str] = {}
@@ -75,7 +81,9 @@ class LocalSerializer(serializers.ModelSerializer):
         if sabado_inicio and sabado_fim and sabado_inicio >= sabado_fim:
             errors["sabado_fim"] = "Fim do sábado deve ser após o início."
         if manha_fim and tarde_inicio and manha_fim > tarde_inicio:
-            errors["tarde_inicio"] = "O turno da tarde deve começar após o fim da manhã."
+            errors["tarde_inicio"] = (
+                "O turno da tarde deve começar após o fim da manhã."
+            )
 
         if errors:
             raise serializers.ValidationError(errors)
@@ -193,14 +201,18 @@ class ProfissionalSerializer(serializers.ModelSerializer):
 
     def validate_carga_semanal_alvo(self, value: int) -> int:
         if value > 70:
-            raise serializers.ValidationError("Carga semanal alvo deve ser no máximo 70 horas.")
+            raise serializers.ValidationError(
+                "Carga semanal alvo deve ser no máximo 70 horas."
+            )
         return value
 
     def validate_limite_dobras_semana(self, value: int) -> int:
         if value < 0:
             raise serializers.ValidationError("Limite de dobras não pode ser negativo.")
         if value > 14:
-            raise serializers.ValidationError("Limite de dobras por semana é excessivo.")
+            raise serializers.ValidationError(
+                "Limite de dobras por semana é excessivo."
+            )
         return value
 
     def validate_indisponibilidades(self, value: Any) -> list[dict[str, Any]]:
@@ -215,11 +227,15 @@ class ProfissionalSerializer(serializers.ModelSerializer):
 
         for entry in value:
             if not isinstance(entry, Mapping):
-                raise serializers.ValidationError("Formato inválido de indisponibilidade.")
+                raise serializers.ValidationError(
+                    "Formato inválido de indisponibilidade."
+                )
             dia_semana = entry.get("dia_semana")
             turno = entry.get("turno")
             if dia_semana not in dias_validos or turno not in turnos_validos:
-                raise serializers.ValidationError("Dia/turno inválido em indisponibilidades.")
+                raise serializers.ValidationError(
+                    "Dia/turno inválido em indisponibilidades."
+                )
             normalized.append({"dia_semana": dia_semana, "turno": turno})
 
         return normalized
@@ -234,14 +250,20 @@ class ProfissionalSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 "Um local não pode ser ao mesmo tempo preferido e proibido."
             )
-        classificacao = attrs.get("classificacao") or getattr(self.instance, "classificacao", "")
+        classificacao = attrs.get("classificacao") or getattr(
+            self.instance, "classificacao", ""
+        )
         valor_diaria = attrs.get("valor_diaria")
         valor_salario = attrs.get("valor_salario_mensal")
         if valor_diaria and valor_salario:
-            raise serializers.ValidationError("Informe apenas diária ou salário, não ambos.")
+            raise serializers.ValidationError(
+                "Informe apenas diária ou salário, não ambos."
+            )
         if classificacao == ClassificacaoProfissional.ESTAGIARIA:
             if valor_diaria:
-                raise serializers.ValidationError("Estagiária não utiliza valor de diária.")
+                raise serializers.ValidationError(
+                    "Estagiária não utiliza valor de diária."
+                )
             if valor_salario is None:
                 raise serializers.ValidationError("Estagiária deve ter salário mensal.")
             if attrs.get("cnpj"):
@@ -251,7 +273,9 @@ class ProfissionalSerializer(serializers.ModelSerializer):
             ClassificacaoProfissional.FREELANCER,
         ):
             if valor_salario:
-                raise serializers.ValidationError("MEI/Freelancer usa diária, não salário.")
+                raise serializers.ValidationError(
+                    "MEI/Freelancer usa diária, não salário."
+                )
             if valor_diaria is None:
                 raise serializers.ValidationError("Informe o valor da diária.")
         return attrs
@@ -268,7 +292,9 @@ class ProfissionalSerializer(serializers.ModelSerializer):
         return profissional
 
     @transaction.atomic
-    def update(self, instance: Profissional, validated_data: dict[str, Any]) -> Profissional:
+    def update(
+        self, instance: Profissional, validated_data: dict[str, Any]
+    ) -> Profissional:
         preferidos = validated_data.pop("locais_preferidos", None)
         proibidos = validated_data.pop("locais_proibidos", None)
         tags = validated_data.pop("tags", None)
@@ -306,9 +332,13 @@ class PremissasGlobaisSerializer(serializers.ModelSerializer):
 
     def validate_janela_planejamento_semanas(self, value: int) -> int:
         if value < 1:
-            raise serializers.ValidationError("Janela de planejamento deve ser positiva.")
+            raise serializers.ValidationError(
+                "Janela de planejamento deve ser positiva."
+            )
         if value > 12:
-            raise serializers.ValidationError("Janela de planejamento não pode exceder 12 semanas.")
+            raise serializers.ValidationError(
+                "Janela de planejamento não pode exceder 12 semanas."
+            )
         return value
 
     def validate_limite_horas_semana(self, value: int) -> int:
@@ -322,7 +352,9 @@ class PremissasGlobaisSerializer(serializers.ModelSerializer):
         if value < 0:
             raise serializers.ValidationError("Limite de dobras não pode ser negativo.")
         if value > 14:
-            raise serializers.ValidationError("Limite de dobras por semana é alto demais.")
+            raise serializers.ValidationError(
+                "Limite de dobras por semana é alto demais."
+            )
         return value
 
     @transaction.atomic

@@ -14,7 +14,9 @@ router.register("profissionais", ProfissionalViewSet)
 router.register("locais", LocalViewSet)
 router.register("salas", SalaViewSet)
 router.register("capacidade-salas", CapacidadeSalaViewSet, basename="capacidade-salas")
-router.register("premissas-globais", PremissasGlobaisViewSet, basename="premissas-globais")
+router.register(
+    "premissas-globais", PremissasGlobaisViewSet, basename="premissas-globais"
+)
 
 urlpatterns = [
     path("", include(router.urls)),

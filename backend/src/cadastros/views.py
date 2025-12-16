@@ -15,7 +15,9 @@ from .serializers import (
 
 
 class ProfissionalViewSet(viewsets.ModelViewSet):
-    queryset = Profissional.objects.prefetch_related("locais_preferidos", "locais_proibidos")
+    queryset = Profissional.objects.prefetch_related(
+        "locais_preferidos", "locais_proibidos"
+    )
     serializer_class = ProfissionalSerializer
     permission_classes = [IsAuthenticated]
 

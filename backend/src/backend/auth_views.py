@@ -81,14 +81,19 @@ def _delete_other_sessions(user_id: int, current_session_key: str | None) -> Non
         try:
             data = session.get_decoded()
         except Exception as exc:  # noqa: BLE001
-            logger.warning("Falha ao decodificar sessão ao invalidar outras sessões: %s", exc)
+            logger.warning(
+                "Falha ao decodificar sessão ao invalidar outras sessões: %s", exc
+            )
             continue
 
         session_user_id = data.get("_auth_user_id")
         if session_user_id is None:
             continue
 
-        if str(session_user_id) == str(user_id) and session.session_key != current_session_key:
+        if (
+            str(session_user_id) == str(user_id)
+            and session.session_key != current_session_key
+        ):
             session.delete()
 
 
@@ -142,13 +147,17 @@ def login_view(request: Request) -> Response:
         try:
             payload = json.loads(request.body or "{}")
         except json.JSONDecodeError:
-            return Response({"detail": "JSON inválido."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"detail": "JSON inválido."}, status=status.HTTP_400_BAD_REQUEST
+            )
 
     username_or_email = (payload.get("username") or payload.get("email") or "").strip()
     password = (payload.get("password") or "").strip()
 
     if not username_or_email or not password:
-        _log_auth_event("login", "missing_credentials", request, username=username_or_email)
+        _log_auth_event(
+            "login", "missing_credentials", request, username=username_or_email
+        )
         return Response(
             {"detail": "Usuário e senha são obrigatórios."},
             status=status.HTTP_400_BAD_REQUEST,
@@ -161,16 +170,24 @@ def login_view(request: Request) -> Response:
             user = auth_user
     else:
         email_user: User | None = (
-            User.objects.filter(email__iexact=username_or_email).only("username").first()
+            User.objects.filter(email__iexact=username_or_email)
+            .only("username")
+            .first()
         )
         if email_user:
-            auth_user = authenticate(request, username=email_user.username, password=password)
+            auth_user = authenticate(
+                request, username=email_user.username, password=password
+            )
             if isinstance(auth_user, User):
                 user = auth_user
 
     if user is None or not isinstance(user, User):
-        _log_auth_event("login", "invalid_credentials", request, username=username_or_email)
-        return Response({"detail": "Credenciais inválidas."}, status=status.HTTP_401_UNAUTHORIZED)
+        _log_auth_event(
+            "login", "invalid_credentials", request, username=username_or_email
+        )
+        return Response(
+            {"detail": "Credenciais inválidas."}, status=status.HTTP_401_UNAUTHORIZED
+        )
 
     login(request, user)
     request.session.cycle_key()
@@ -186,7 +203,9 @@ def login_view(request: Request) -> Response:
 def me_view(request: Request) -> Response:
     user = request.user
     if not isinstance(user, User):
-        return Response({"detail": "Sessão inválida."}, status=status.HTTP_401_UNAUTHORIZED)
+        return Response(
+            {"detail": "Sessão inválida."}, status=status.HTTP_401_UNAUTHORIZED
+        )
     return Response({"user": _serialize_user(user)})
 
 
@@ -209,7 +228,9 @@ def password_change_view(request: Request) -> Response:
         try:
             payload = json.loads(request.body or "{}")
         except json.JSONDecodeError:
-            return Response({"detail": "JSON inválido."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"detail": "JSON inválido."}, status=status.HTTP_400_BAD_REQUEST
+            )
 
     old_password = (payload.get("old_password") or "").strip()
     new_password = (payload.get("new_password") or "").strip()
@@ -224,17 +245,25 @@ def password_change_view(request: Request) -> Response:
 
     if not isinstance(request.user, User):
         _log_auth_event("password_change", "invalid_session", request)
-        return Response({"detail": "Sessão inválida."}, status=status.HTTP_401_UNAUTHORIZED)
+        return Response(
+            {"detail": "Sessão inválida."}, status=status.HTTP_401_UNAUTHORIZED
+        )
 
     user = request.user
     if not user.check_password(old_password):
-        _log_auth_event("password_change", "invalid_current_password", request, user=user)
-        return Response({"detail": "Senha atual inválida."}, status=status.HTTP_400_BAD_REQUEST)
+        _log_auth_event(
+            "password_change", "invalid_current_password", request, user=user
+        )
+        return Response(
+            {"detail": "Senha atual inválida."}, status=status.HTTP_400_BAD_REQUEST
+        )
 
     try:
         validate_password(new_password, user=user)
     except Exception as exc:  # noqa: BLE001
-        _log_auth_event("password_change", "password_validation_failed", request, user=user)
+        _log_auth_event(
+            "password_change", "password_validation_failed", request, user=user
+        )
         return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
 
     current_session_key = request.session.session_key
@@ -264,11 +293,15 @@ def password_reset_request_view(request: Request) -> Response:
         try:
             payload = json.loads(request.body or "{}")
         except json.JSONDecodeError:
-            return Response({"detail": "JSON inválido."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"detail": "JSON inválido."}, status=status.HTTP_400_BAD_REQUEST
+            )
 
     email = (payload.get("email") or "").strip()
     if email:
-        logger.info("Solicitação de reset de senha para email %s (mock, sem envio real)", email)
+        logger.info(
+            "Solicitação de reset de senha para email %s (mock, sem envio real)", email
+        )
     else:
         logger.info("Solicitação de reset de senha sem email informado (mock)")
 
@@ -294,7 +327,9 @@ def password_reset_request_view(request: Request) -> Response:
             )
             logger.info("Email de reset enviado (mock SMTP) para %s", user.email)
     else:
-        logger.info("Solicitação de reset sem correspondência de usuário (email=%s)", email)
+        logger.info(
+            "Solicitação de reset sem correspondência de usuário (email=%s)", email
+        )
 
     # Resposta genérica para evitar exposição de usuários
     return Response(
@@ -313,7 +348,9 @@ def password_reset_confirm_view(request: Request) -> Response:
         try:
             payload = json.loads(request.body or "{}")
         except json.JSONDecodeError:
-            return Response({"detail": "JSON inválido."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"detail": "JSON inválido."}, status=status.HTTP_400_BAD_REQUEST
+            )
 
     uidb64 = (payload.get("uid") or "").strip()
     token = (payload.get("token") or "").strip()
@@ -367,20 +404,28 @@ def email_change_view(request: Request) -> Response:
         try:
             payload = json.loads(request.body or "{}")
         except json.JSONDecodeError:
-            return Response({"detail": "JSON inválido."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"detail": "JSON inválido."}, status=status.HTTP_400_BAD_REQUEST
+            )
 
     new_email = (payload.get("email") or "").strip().lower()
     if not new_email:
-        return Response({"detail": "Email é obrigatório."}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {"detail": "Email é obrigatório."}, status=status.HTTP_400_BAD_REQUEST
+        )
 
     try:
         validate_email(new_email)
     except ValidationError:
-        return Response({"detail": "Email inválido."}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {"detail": "Email inválido."}, status=status.HTTP_400_BAD_REQUEST
+        )
 
     user = request.user
     if not isinstance(user, User):
-        return Response({"detail": "Sessão inválida."}, status=status.HTTP_401_UNAUTHORIZED)
+        return Response(
+            {"detail": "Sessão inválida."}, status=status.HTTP_401_UNAUTHORIZED
+        )
 
     if User.objects.filter(email__iexact=new_email).exclude(pk=user.pk).exists():
         return Response(

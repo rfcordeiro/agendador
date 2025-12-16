@@ -91,7 +91,8 @@ jobs:
                 "EMAIL_USE_TLS=${{ secrets.STG_EMAIL_USE_TLS }}" \
                 "EMAIL_HOST_USER=${{ secrets.STG_EMAIL_HOST_USER }}" \
                 "EMAIL_HOST_PASSWORD=${{ secrets.STG_EMAIL_HOST_PASSWORD }}" \
-                "DEFAULT_FROM_EMAIL=${{ secrets.STG_DEFAULT_FROM_EMAIL }}"
+                "DEFAULT_FROM_EMAIL=${{ secrets.STG_DEFAULT_FROM_EMAIL }}" \
+                "CSRF_TRUSTED_ORIGINS=http://${{ secrets.HETZNER_STAGING_HOST }},https://${{ secrets.HETZNER_STAGING_HOST }},http://${{ secrets.HETZNER_STAGING_HOST }}:5173"
             } > .env
 
             printf '%s\n' \

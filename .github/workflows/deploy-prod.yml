@@ -98,7 +98,8 @@ jobs:
                 "EMAIL_USE_TLS=${{ secrets.PROD_EMAIL_USE_TLS }}" \
                 "EMAIL_HOST_USER=${{ secrets.PROD_EMAIL_HOST_USER }}" \
                 "EMAIL_HOST_PASSWORD=${{ secrets.PROD_EMAIL_HOST_PASSWORD }}" \
-                "DEFAULT_FROM_EMAIL=${{ secrets.PROD_DEFAULT_FROM_EMAIL }}"
+                "DEFAULT_FROM_EMAIL=${{ secrets.PROD_DEFAULT_FROM_EMAIL }}" \
+                "CSRF_TRUSTED_ORIGINS=http://${{ secrets.HETZNER_PROD_HOST }},https://${{ secrets.HETZNER_PROD_HOST }}"
             } > .env
 
             printf '%s\n' \

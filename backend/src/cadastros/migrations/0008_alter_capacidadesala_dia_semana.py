@@ -4,7 +4,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("cadastros", "0007_remove_non_weekly_recurrences"),
     ]

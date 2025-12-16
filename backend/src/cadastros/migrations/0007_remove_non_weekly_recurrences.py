@@ -9,11 +9,12 @@ def drop_non_weekly_recurrences(apps, schema_editor):
 
     CapacidadeSalaEvento.objects.all().delete()
     CapacidadeSala.objects.exclude(recorrencia_tipo="semanal").delete()
-    CapacidadeSala.objects.filter(recorrencia_tipo="semanal", dia_semana__isnull=True).delete()
+    CapacidadeSala.objects.filter(
+        recorrencia_tipo="semanal", dia_semana__isnull=True
+    ).delete()
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("cadastros", "0006_alter_capacidadesala_data_especial_and_more"),
     ]
