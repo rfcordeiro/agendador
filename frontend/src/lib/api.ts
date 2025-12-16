@@ -171,7 +171,7 @@ export async function deleteSala(id: number): Promise<void> {
 
 export async function fetchCapacidades(): Promise<CapacidadeSala[]> {
   return apiJson<CapacidadeSala[]>(
-    '/api/cadastros/capacidade-sala/',
+    '/api/cadastros/capacidade-salas/',
     {},
     { expectArray: true },
   );
@@ -180,7 +180,7 @@ export async function fetchCapacidades(): Promise<CapacidadeSala[]> {
 export async function createCapacidadeSala(
   data: Partial<CapacidadeSala>,
 ): Promise<CapacidadeSala> {
-  return apiJson<CapacidadeSala>('/api/cadastros/capacidade-sala/', {
+  return apiJson<CapacidadeSala>('/api/cadastros/capacidade-salas/', {
     method: 'POST',
     body: JSON.stringify(data),
   });
@@ -190,14 +190,14 @@ export async function updateCapacidadeSala(
   id: number,
   data: Partial<CapacidadeSala>,
 ): Promise<CapacidadeSala> {
-  return apiJson<CapacidadeSala>(`/api/cadastros/capacidade-sala/${id}/`, {
+  return apiJson<CapacidadeSala>(`/api/cadastros/capacidade-salas/${id}/`, {
     method: 'PATCH',
     body: JSON.stringify(data),
   });
 }
 
 export async function deleteCapacidadeSala(id: number): Promise<void> {
-  await fetch(`/api/cadastros/capacidade-sala/${id}/`, {
+  await fetch(`/api/cadastros/capacidade-salas/${id}/`, {
     method: 'DELETE',
     headers: { 'X-CSRFToken': await ensureCsrf() },
   });
