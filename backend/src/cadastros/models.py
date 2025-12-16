@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import time
+
 from django.core.validators import RegexValidator
 from django.db import models
 from django.utils.translation import gettext_lazy as _
@@ -27,12 +29,29 @@ class DiaSemana(models.IntegerChoices):
 
 
 class Local(models.Model):
+    class TipoLocal(models.TextChoices):
+        ASSOCIACAO = "associacao", _("Associação")
+        EVENTO = "evento", _("Evento")
+        CLINICA = "clinica", _("Clínica")
+
     nome = models.CharField(max_length=150)
     endereco = models.CharField(max_length=255, blank=True)
     area = models.CharField(max_length=120, blank=True, help_text="Bairro ou região")
     observacao = models.TextField(blank=True, default="")
     prioridade_cobertura = models.PositiveSmallIntegerField(default=1)
     ativo = models.BooleanField(default=True)
+    tipo = models.CharField(
+        max_length=20,
+        choices=TipoLocal.choices,
+        default=TipoLocal.EVENTO,
+        help_text="Define se o local é associação, evento ou clínica.",
+    )
+    manha_inicio = models.TimeField(default=time(8, 0), help_text="Início do turno da manhã.")
+    manha_fim = models.TimeField(default=time(14, 0), help_text="Fim do turno da manhã.")
+    tarde_inicio = models.TimeField(default=time(14, 0), help_text="Início do turno da tarde.")
+    tarde_fim = models.TimeField(default=time(20, 0), help_text="Fim do turno da tarde.")
+    sabado_inicio = models.TimeField(default=time(9, 0), help_text="Início do sábado.")
+    sabado_fim = models.TimeField(default=time(14, 0), help_text="Fim do sábado.")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

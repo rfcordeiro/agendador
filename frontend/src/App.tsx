@@ -55,8 +55,17 @@ interface Local {
   endereco: string;
   observacao: string;
   prioridade_cobertura: number;
+  tipo: LocalTipo;
+  manha_inicio: string;
+  manha_fim: string;
+  tarde_inicio: string;
+  tarde_fim: string;
+  sabado_inicio: string;
+  sabado_fim: string;
   ativo: boolean;
 }
+
+type LocalTipo = 'associacao' | 'evento' | 'clinica';
 
 interface Sala {
   id: number;
@@ -1930,6 +1939,71 @@ function ProfissionaisPage() {
   );
 }
 
+const localTipoOptions: { value: LocalTipo; label: string; hint: string }[] = [
+  { value: 'clinica', label: 'Clínica', hint: 'Aberta para agenda padrão.' },
+  {
+    value: 'associacao',
+    label: 'Associação',
+    hint: 'Fluxo restrito ou interno.',
+  },
+  {
+    value: 'evento',
+    label: 'Evento',
+    hint: 'Datas pontuais; agenda futura manual.',
+  },
+];
+
+interface LocalForm {
+  nome: string;
+  area: string;
+  endereco: string;
+  observacao: string;
+  prioridade_cobertura: number;
+  tipo: LocalTipo;
+  manha_inicio: string;
+  manha_fim: string;
+  tarde_inicio: string;
+  tarde_fim: string;
+  sabado_inicio: string;
+  sabado_fim: string;
+}
+
+const defaultTurnos: Pick<
+  LocalForm,
+  | 'manha_inicio'
+  | 'manha_fim'
+  | 'tarde_inicio'
+  | 'tarde_fim'
+  | 'sabado_inicio'
+  | 'sabado_fim'
+> = {
+  manha_inicio: '08:00',
+  manha_fim: '14:00',
+  tarde_inicio: '14:00',
+  tarde_fim: '20:00',
+  sabado_inicio: '09:00',
+  sabado_fim: '14:00',
+};
+
+function normalizeTimeInput(value: string): string {
+  if (!value) return '';
+  const [hour = '00', minute = '00'] = value.split(':');
+  return `${hour.padStart(2, '0')}:${minute.padStart(2, '0').slice(0, 2)}`;
+}
+
+function describeTurnos(local: Local): string {
+  const manha = `${normalizeTimeInput(local.manha_inicio)}-${normalizeTimeInput(local.manha_fim)}`;
+  const tarde = `${normalizeTimeInput(local.tarde_inicio)}-${normalizeTimeInput(local.tarde_fim)}`;
+  const sabado = `${normalizeTimeInput(local.sabado_inicio)}-${normalizeTimeInput(local.sabado_fim)}`;
+  return `Manhã ${manha} · Tarde ${tarde} · Sáb ${sabado}`;
+}
+
+const localTipoLabel: Record<LocalTipo, string> = {
+  clinica: 'Clínica',
+  associacao: 'Associação',
+  evento: 'Evento',
+};
+
 function LocaisPage() {
   const [locais, setLocais] = useState<Local[]>([]);
   const [salas, setSalas] = useState<Sala[]>([]);
@@ -1937,12 +2011,14 @@ function LocaisPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [localForm, setLocalForm] = useState({
+  const [localForm, setLocalForm] = useState<LocalForm>({
     nome: '',
     area: '',
     endereco: '',
     observacao: '',
     prioridade_cobertura: 1,
+    tipo: 'evento',
+    ...defaultTurnos,
   });
   const [salaForm, setSalaForm] = useState({ local: 0, nome: '' });
   const [capTargetSala, setCapTargetSala] = useState<Sala | null>(null);
@@ -2021,6 +2097,8 @@ function LocaisPage() {
         endereco: '',
         observacao: '',
         prioridade_cobertura: 1,
+        tipo: 'evento',
+        ...defaultTurnos,
       });
       setShowLocalModal(false);
     } catch (exception) {
@@ -2258,6 +2336,8 @@ function LocaisPage() {
                 endereco: '',
                 observacao: '',
                 prioridade_cobertura: 1,
+                tipo: 'evento',
+                ...defaultTurnos,
               });
               setShowLocalModal(true);
             }}
@@ -2332,6 +2412,9 @@ function LocaisPage() {
                       {local.prioridade_cobertura}
                     </p>
                     <p className='muted small-print'>
+                      {localTipoLabel[local.tipo]} · {describeTurnos(local)}
+                    </p>
+                    <p className='muted small-print'>
                       {local.endereco || 'Endereço não informado'}
                     </p>
                     {local.observacao ? (
@@ -2362,6 +2445,15 @@ function LocaisPage() {
                           endereco: local.endereco,
                           observacao: local.observacao,
                           prioridade_cobertura: local.prioridade_cobertura,
+                          tipo: local.tipo,
+                          manha_inicio: normalizeTimeInput(local.manha_inicio),
+                          manha_fim: normalizeTimeInput(local.manha_fim),
+                          tarde_inicio: normalizeTimeInput(local.tarde_inicio),
+                          tarde_fim: normalizeTimeInput(local.tarde_fim),
+                          sabado_inicio: normalizeTimeInput(
+                            local.sabado_inicio,
+                          ),
+                          sabado_fim: normalizeTimeInput(local.sabado_fim),
                         });
                         setShowLocalModal(true);
                       }}
@@ -2669,6 +2761,10 @@ function LocaisPage() {
             área/região e prioridade.
           </li>
           <li>
+            Tipo do local (clínica/associação/evento) e horários de turno
+            definem como a agenda vai abrir no futuro.
+          </li>
+          <li>
             Sala é um espaço físico dentro do local; cada sala recebe uma
             profissional por turno.
           </li>
@@ -2733,6 +2829,119 @@ function LocaisPage() {
               />
             </label>
           </div>
+          <label className='field'>
+            <span>Tipo do local</span>
+            <select
+              value={localForm.tipo}
+              onChange={(event) =>
+                setLocalForm({
+                  ...localForm,
+                  tipo: event.target.value as LocalTipo,
+                })
+              }
+            >
+              {localTipoOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            <p className='muted small-print'>
+              {
+                localTipoOptions.find(
+                  (option) => option.value === localForm.tipo,
+                )?.hint
+              }
+            </p>
+          </label>
+          <div className='two-cols'>
+            <label className='field'>
+              <span>Manhã - início</span>
+              <input
+                type='time'
+                value={localForm.manha_inicio}
+                onChange={(event) =>
+                  setLocalForm({
+                    ...localForm,
+                    manha_inicio: normalizeTimeInput(event.target.value),
+                  })
+                }
+              />
+            </label>
+            <label className='field'>
+              <span>Manhã - fim</span>
+              <input
+                type='time'
+                value={localForm.manha_fim}
+                onChange={(event) =>
+                  setLocalForm({
+                    ...localForm,
+                    manha_fim: normalizeTimeInput(event.target.value),
+                  })
+                }
+              />
+            </label>
+          </div>
+          <div className='two-cols'>
+            <label className='field'>
+              <span>Tarde - início</span>
+              <input
+                type='time'
+                value={localForm.tarde_inicio}
+                onChange={(event) =>
+                  setLocalForm({
+                    ...localForm,
+                    tarde_inicio: normalizeTimeInput(event.target.value),
+                  })
+                }
+              />
+            </label>
+            <label className='field'>
+              <span>Tarde - fim</span>
+              <input
+                type='time'
+                value={localForm.tarde_fim}
+                onChange={(event) =>
+                  setLocalForm({
+                    ...localForm,
+                    tarde_fim: normalizeTimeInput(event.target.value),
+                  })
+                }
+              />
+            </label>
+          </div>
+          <div className='two-cols'>
+            <label className='field'>
+              <span>Sábado - início</span>
+              <input
+                type='time'
+                value={localForm.sabado_inicio}
+                onChange={(event) =>
+                  setLocalForm({
+                    ...localForm,
+                    sabado_inicio: normalizeTimeInput(event.target.value),
+                  })
+                }
+              />
+            </label>
+            <label className='field'>
+              <span>Sábado - fim</span>
+              <input
+                type='time'
+                value={localForm.sabado_fim}
+                onChange={(event) =>
+                  setLocalForm({
+                    ...localForm,
+                    sabado_fim: normalizeTimeInput(event.target.value),
+                  })
+                }
+              />
+            </label>
+          </div>
+          <p className='muted small-print'>
+            Padrão: manhã 08:00-14:00 e tarde 14:00-20:00; sábado 09:00-14:00.
+            Ajuste se a unidade tiver janelas diferentes.
+          </p>
           <label className='field'>
             <span>Endereço</span>
             <input

@@ -40,6 +40,13 @@ class LocalSerializer(serializers.ModelSerializer):
             "observacao",
             "prioridade_cobertura",
             "ativo",
+            "tipo",
+            "manha_inicio",
+            "manha_fim",
+            "tarde_inicio",
+            "tarde_fim",
+            "sabado_inicio",
+            "sabado_fim",
             "created_at",
             "updated_at",
         ]
@@ -49,6 +56,31 @@ class LocalSerializer(serializers.ModelSerializer):
         if value < 1:
             raise serializers.ValidationError("Prioridade deve ser pelo menos 1.")
         return value
+
+    def validate(self, attrs: dict[str, Any]) -> dict[str, Any]:
+        instance = self.instance
+        manha_inicio = attrs.get("manha_inicio", getattr(instance, "manha_inicio", None))
+        manha_fim = attrs.get("manha_fim", getattr(instance, "manha_fim", None))
+        tarde_inicio = attrs.get("tarde_inicio", getattr(instance, "tarde_inicio", None))
+        tarde_fim = attrs.get("tarde_fim", getattr(instance, "tarde_fim", None))
+        sabado_inicio = attrs.get("sabado_inicio", getattr(instance, "sabado_inicio", None))
+        sabado_fim = attrs.get("sabado_fim", getattr(instance, "sabado_fim", None))
+
+        errors: dict[str, str] = {}
+
+        if manha_inicio and manha_fim and manha_inicio >= manha_fim:
+            errors["manha_fim"] = "Fim da manhã deve ser após o início."
+        if tarde_inicio and tarde_fim and tarde_inicio >= tarde_fim:
+            errors["tarde_fim"] = "Fim da tarde deve ser após o início."
+        if sabado_inicio and sabado_fim and sabado_inicio >= sabado_fim:
+            errors["sabado_fim"] = "Fim do sábado deve ser após o início."
+        if manha_fim and tarde_inicio and manha_fim > tarde_inicio:
+            errors["tarde_inicio"] = "O turno da tarde deve começar após o fim da manhã."
+
+        if errors:
+            raise serializers.ValidationError(errors)
+
+        return attrs
 
 
 class SalaSerializer(serializers.ModelSerializer):
