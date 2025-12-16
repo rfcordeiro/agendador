@@ -84,9 +84,7 @@ def _db_from_env() -> dict:
 DATABASES = _db_from_env()
 
 AUTH_PASSWORD_VALIDATORS = [
-    {
-        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"
-    },
+    {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
     {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
@@ -151,15 +149,11 @@ def _env_bool(var_name: str, default: bool = False) -> bool:
 
 
 # Email / SMTP
-EMAIL_BACKEND = os.environ.get(
-    "EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend"
-)
+EMAIL_BACKEND = os.environ.get("EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend")
 EMAIL_HOST = os.environ.get("EMAIL_HOST", "")
 EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "587"))
 EMAIL_USE_TLS = _env_bool("EMAIL_USE_TLS", True)
 EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
 EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
 DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "nao-responder@example.com")
-FRONTEND_RESET_URL = os.environ.get(
-    "FRONTEND_RESET_URL", "http://localhost:5173/reset-password"
-)
+FRONTEND_RESET_URL = os.environ.get("FRONTEND_RESET_URL", "http://localhost:5173/reset-password")

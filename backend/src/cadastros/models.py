@@ -46,18 +46,10 @@ class Local(models.Model):
         default=TipoLocal.EVENTO,
         help_text="Define se o local é associação, evento ou clínica.",
     )
-    manha_inicio = models.TimeField(
-        default=time(8, 0), help_text="Início do turno da manhã."
-    )
-    manha_fim = models.TimeField(
-        default=time(14, 0), help_text="Fim do turno da manhã."
-    )
-    tarde_inicio = models.TimeField(
-        default=time(14, 0), help_text="Início do turno da tarde."
-    )
-    tarde_fim = models.TimeField(
-        default=time(20, 0), help_text="Fim do turno da tarde."
-    )
+    manha_inicio = models.TimeField(default=time(8, 0), help_text="Início do turno da manhã.")
+    manha_fim = models.TimeField(default=time(14, 0), help_text="Fim do turno da manhã.")
+    tarde_inicio = models.TimeField(default=time(14, 0), help_text="Início do turno da tarde.")
+    tarde_fim = models.TimeField(default=time(20, 0), help_text="Fim do turno da tarde.")
     sabado_inicio = models.TimeField(default=time(9, 0), help_text="Início do sábado.")
     sabado_fim = models.TimeField(default=time(14, 0), help_text="Fim do sábado.")
     created_at = models.DateTimeField(auto_now_add=True)
@@ -73,9 +65,7 @@ class Local(models.Model):
 class Profissional(models.Model):
     nome = models.CharField(max_length=150)
     email = models.EmailField(unique=True)
-    turno_preferencial = models.CharField(
-        max_length=12, choices=TurnoChoices.choices, blank=True
-    )
+    turno_preferencial = models.CharField(max_length=12, choices=TurnoChoices.choices, blank=True)
     google_calendar_id = models.CharField(max_length=255, blank=True)
     classificacao = models.CharField(
         max_length=20, choices=ClassificacaoProfissional.choices, blank=True, default=""
@@ -131,9 +121,7 @@ class Profissional(models.Model):
     celular = models.CharField(
         max_length=20,
         blank=True,
-        validators=[
-            RegexValidator(r"^\+55\d{10,11}$", "Use o formato +55DDxxxxxxxxx.")
-        ],
+        validators=[RegexValidator(r"^\+55\d{10,11}$", "Use o formato +55DDxxxxxxxxx.")],
     )
     banco_nome = models.CharField(max_length=120, blank=True)
     banco_agencia = models.CharField(max_length=20, blank=True)
