@@ -8,36 +8,37 @@ PIP=$(PYTHON) -m pip
 RUFF=$(VENV)/bin/ruff
 MYPY=$(VENV)/bin/mypy
 
-.PHONY: help venv backend-install backend-install-dev backend-run backend-test backend-migrate backend-superuser backend-lint backend-format backend-typecheck frontend-install frontend-dev frontend-lint frontend-format frontend-typecheck compose-up compose-down compose-reset compose-migrate compose-makemigrations compose-superuser compose-backend-lint compose-backend-format compose-backend-typecheck compose-frontend-lint compose-frontend-format compose-frontend-typecheck
+.PHONY: help venv backend-install backend-install-dev backend-run backend-test backend-migrate backend-superuser backend-lint backend-format backend-typecheck frontend-install frontend-dev frontend-lint frontend-format frontend-typecheck compose-up compose-down compose-reset compose-migrate compose-makemigrations compose-superuser compose-backend-lint compose-backend-lint-fix compose-backend-format compose-backend-typecheck compose-frontend-lint compose-frontend-format compose-frontend-typecheck
 
 help:
 	@echo "Comandos comuns:"
-	@echo "  make backend-install      # cria venv e instala deps do backend"
-	@echo "  make backend-install-dev  # instala deps de dev (ruff/mypy/pytest)"
-	@echo "  make backend-run          # servidor Django dev"
-	@echo "  make backend-test         # testes do backend"
-	@echo "  make backend-migrate      # aplica migrations (SQLite por padrao)"
-	@echo "  make backend-superuser    # cria superusuario"
-	@echo "  make backend-lint         # lint com ruff"
-	@echo "  make backend-format       # format com ruff"
-	@echo "  make backend-typecheck    # mypy"
-	@echo "  make frontend-install     # instala deps do frontend"
-	@echo "  make frontend-dev         # servidor Vite"
-	@echo "  make frontend-lint        # eslint"
-	@echo "  make frontend-format      # prettier"
-	@echo "  make frontend-typecheck   # tsc --noEmit"
-	@echo "  make compose-up           # sobe stack (backend/frontend/db/redis)"
-	@echo "  make compose-down         # derruba stack"
-	@echo "  make compose-reset        # reseta volumes e sobe novamente"
-	@echo "  make compose-makemigrations # cria migrations dentro do container backend"
-	@echo "  make compose-migrate      # migrations dentro do container backend"
-	@echo "  make compose-superuser    # superusuario dentro do container backend"
-	@echo "  make compose-backend-lint # lint do backend dentro do container"
-	@echo "  make compose-backend-format # format do backend dentro do container"
-	@echo "  make compose-backend-typecheck # mypy dentro do container"
-	@echo "  make compose-frontend-lint # eslint dentro do container"
-	@echo "  make compose-frontend-format # prettier dentro do container"
-	@echo "  make compose-frontend-typecheck # tsc --noEmit dentro do container"
+	@printf "  make %-26s %s\n" "backend-install" "# cria venv e instala deps do backend"
+	@printf "  make %-26s %s\n" "backend-install-dev" "# instala deps de dev (ruff/mypy/pytest)"
+	@printf "  make %-26s %s\n" "backend-run" "# servidor Django dev"
+	@printf "  make %-26s %s\n" "backend-test" "# testes do backend"
+	@printf "  make %-26s %s\n" "backend-migrate" "# aplica migrations (SQLite por padrao)"
+	@printf "  make %-26s %s\n" "backend-superuser" "# cria superusuario"
+	@printf "  make %-26s %s\n" "backend-lint" "# lint com ruff"
+	@printf "  make %-26s %s\n" "backend-format" "# format com ruff"
+	@printf "  make %-26s %s\n" "backend-typecheck" "# mypy"
+	@printf "  make %-26s %s\n" "frontend-install" "# instala deps do frontend"
+	@printf "  make %-26s %s\n" "frontend-dev" "# servidor Vite"
+	@printf "  make %-26s %s\n" "frontend-lint" "# eslint"
+	@printf "  make %-26s %s\n" "frontend-format" "# prettier"
+	@printf "  make %-26s %s\n" "frontend-typecheck" "# tsc --noEmit"
+	@printf "  make %-26s %s\n" "compose-up" "# sobe stack (backend/frontend/db/redis)"
+	@printf "  make %-26s %s\n" "compose-down" "# derruba stack"
+	@printf "  make %-26s %s\n" "compose-reset" "# reseta volumes e sobe novamente"
+	@printf "  make %-26s %s\n" "compose-makemigrations" "# cria migrations dentro do container backend"
+	@printf "  make %-26s %s\n" "compose-migrate" "# migrations dentro do container backend"
+	@printf "  make %-26s %s\n" "compose-superuser" "# superusuario dentro do container backend"
+	@printf "  make %-26s %s\n" "compose-backend-lint" "# lint do backend dentro do container"
+	@printf "  make %-26s %s\n" "compose-backend-lint-fix" "# lint do backend com --fix dentro do container"
+	@printf "  make %-26s %s\n" "compose-backend-format" "# format do backend dentro do container"
+	@printf "  make %-26s %s\n" "compose-backend-typecheck" "# mypy dentro do container"
+	@printf "  make %-26s %s\n" "compose-frontend-lint" "# eslint dentro do container"
+	@printf "  make %-26s %s\n" "compose-frontend-format" "# prettier dentro do container"
+	@printf "  make %-26s %s\n" "compose-frontend-typecheck" "# tsc --noEmit dentro do container"
 
 $(VENV):
 	$(PY_BIN) -m venv $(VENV)
@@ -107,6 +108,11 @@ compose-backend-lint:
 	docker compose run --rm \
 		-v $(shell pwd)/ruff.toml:/app/ruff.toml:ro \
 		backend sh -c "pip install -r requirements-dev.txt && ruff check ."
+
+compose-backend-lint-fix:
+	docker compose run --rm \
+		-v $(shell pwd)/ruff.toml:/app/ruff.toml:ro \
+		backend sh -c "pip install -r requirements-dev.txt && ruff check . --fix"
 
 compose-backend-format:
 	docker compose run --rm \

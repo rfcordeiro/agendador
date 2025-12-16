@@ -33,9 +33,7 @@ class SalaViewSet(viewsets.ModelViewSet):
 
 
 class CapacidadeSalaViewSet(viewsets.ModelViewSet):
-    queryset = CapacidadeSala.objects.select_related("sala", "sala__local").prefetch_related(
-        "eventos"
-    )
+    queryset = CapacidadeSala.objects.select_related("sala", "sala__local")
     serializer_class = CapacidadeSalaSerializer
     permission_classes = [IsAuthenticated]
 
