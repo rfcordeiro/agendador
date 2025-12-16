@@ -3343,15 +3343,6 @@ function Dashboard({
             </button>
           ))}
         </nav>
-        <button
-          type='button'
-          className='ghost-button small sidebar-toggle'
-          onClick={() => setIsSidebarOpen(false)}
-          aria-expanded={isSidebarOpen}
-          aria-controls='primary-sidebar'
-        >
-          Ocultar menu
-        </button>
         <div className='sidebar-footer'>
           <p className='sidebar-user'>
             <strong>{user.name}</strong>
@@ -3364,19 +3355,27 @@ function Dashboard({
       </aside>
 
       <main className='main'>
-        {!isSidebarOpen ? (
-          <div className='sidebar-reopen'>
-            <button
-              type='button'
-              className='ghost-button primary-ghost small'
-              onClick={() => setIsSidebarOpen(true)}
-              aria-expanded={isSidebarOpen}
-              aria-controls='primary-sidebar'
-            >
-              Mostrar menu
-            </button>
-          </div>
-        ) : null}
+        <div className='menu-toggle-tray'>
+          <button
+            type='button'
+            className={`menu-toggle${isSidebarOpen ? ' is-open' : ''}`}
+            onClick={() => setIsSidebarOpen((prev) => !prev)}
+            aria-expanded={isSidebarOpen}
+            aria-controls='primary-sidebar'
+            aria-label={
+              isSidebarOpen ? 'Recolher menu lateral' : 'Abrir menu lateral'
+            }
+          >
+            <span className='hamburger' aria-hidden>
+              <span />
+              <span />
+              <span />
+            </span>
+            <span className='menu-toggle__label'>
+              {isSidebarOpen ? 'Ocultar' : 'Menu'}
+            </span>
+          </button>
+        </div>
         {page === 'dashboard' ? (
           <>
             <header className='topbar'>
