@@ -113,3 +113,4 @@ jobs:
             echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u "${{ secrets.GHCR_USER }}" --password-stdin
             docker compose pull
             docker compose up -d --remove-orphans
+            docker compose exec backend python manage.py migrate
