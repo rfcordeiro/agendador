@@ -389,6 +389,10 @@ p {
   background: var(--color-surface);
 }
 
+.app-shell.sidebar-closed {
+  grid-template-columns: 1fr;
+}
+
 .sidebar {
   border-right: 1px solid var(--color-border);
   padding: 20px 16px 24px;
@@ -397,6 +401,23 @@ p {
   gap: 24px;
   background: rgba(255, 255, 255, 0.78);
   backdrop-filter: blur(6px);
+}
+
+.sidebar[data-open='false'] {
+  display: none;
+}
+
+.sidebar-toggle {
+  align-self: flex-start;
+}
+
+.sidebar-reopen {
+  display: none;
+  margin-bottom: 14px;
+}
+
+.app-shell.sidebar-closed .sidebar-reopen {
+  display: flex;
 }
 
 .brand {
@@ -1385,20 +1406,7 @@ p {
   }
 
   .sidebar {
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-  }
-
-  .nav {
-    flex-direction: row;
-    flex-wrap: wrap;
-    gap: 6px;
-  }
-
-  .nav-item {
-    padding: 10px;
+    gap: 18px;
   }
 
   .main {

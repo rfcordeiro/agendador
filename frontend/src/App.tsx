@@ -3230,6 +3230,7 @@ function Dashboard({
   const [emailLoading, setEmailLoading] = useState(false);
   const [emailError, setEmailError] = useState<string | null>(null);
   const [emailSuccess, setEmailSuccess] = useState<string | null>(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   useEffect(() => {
     setEmailInput(user.email);
   }, [user.email]);
@@ -3244,6 +3245,30 @@ function Dashboard({
       })),
     [user],
   );
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(max-width: 960px)');
+
+    const syncSidebar = (matches: boolean) => setIsSidebarOpen(!matches);
+    syncSidebar(mediaQuery.matches);
+
+    const handleChange = (event: MediaQueryListEvent) =>
+      syncSidebar(event.matches);
+
+    if (mediaQuery.addEventListener) {
+      mediaQuery.addEventListener('change', handleChange);
+    } else {
+      mediaQuery.addListener(handleChange);
+    }
+
+    return () => {
+      if (mediaQuery.removeEventListener) {
+        mediaQuery.removeEventListener('change', handleChange);
+      } else {
+        mediaQuery.removeListener(handleChange);
+      }
+    };
+  }, []);
 
   const handlePasswordSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -3292,8 +3317,13 @@ function Dashboard({
   };
 
   return (
-    <div className='app-shell'>
-      <aside className='sidebar'>
+    <div className={`app-shell${isSidebarOpen ? '' : ' sidebar-closed'}`}>
+      <aside
+        className='sidebar'
+        data-open={isSidebarOpen}
+        aria-hidden={!isSidebarOpen}
+        id='primary-sidebar'
+      >
         <div className='brand'>
           <span className='brand-mark'>Ag</span>
           <div>
@@ -3313,6 +3343,15 @@ function Dashboard({
             </button>
           ))}
         </nav>
+        <button
+          type='button'
+          className='ghost-button small sidebar-toggle'
+          onClick={() => setIsSidebarOpen(false)}
+          aria-expanded={isSidebarOpen}
+          aria-controls='primary-sidebar'
+        >
+          Ocultar menu
+        </button>
         <div className='sidebar-footer'>
           <p className='sidebar-user'>
             <strong>{user.name}</strong>
@@ -3325,6 +3364,19 @@ function Dashboard({
       </aside>
 
       <main className='main'>
+        {!isSidebarOpen ? (
+          <div className='sidebar-reopen'>
+            <button
+              type='button'
+              className='ghost-button primary-ghost small'
+              onClick={() => setIsSidebarOpen(true)}
+              aria-expanded={isSidebarOpen}
+              aria-controls='primary-sidebar'
+            >
+              Mostrar menu
+            </button>
+          </div>
+        ) : null}
         {page === 'dashboard' ? (
           <>
             <header className='topbar'>
