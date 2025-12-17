@@ -24,10 +24,11 @@
   - Campos: id, data, turno, local_id/sala_id (se aplicável), profissional_origem_id, profissional_destino_id, motivo, origem (whatsapp/manual), status (registrada, aplicada).
   - Regras: validar conflitos e limites antes de aplicar; manter histórico.
 - **AgendaGoogle**
-  - Campos: id, profissional_id (ou geral), calendar_id, nome (ex.: “[Tetê Araújo] Camila”), ultima_sync, source_tag (`agendador`), pode_publicar (bool).
-  - Observação: agendas são criadas/compartilhadas com o profissional; não dependem do e-mail principal como agenda nativa.
+  - Campos: id, tipo (geral/profissional/sala), ambiente (dev/stg/prod), calendar_id, nome (ex.: “[Tetê Araújo] Camila”), ultima_sync, sync_token, source_tag (`agendador`), pode_publicar (bool), status (ok/needs_reauth/webhook_expired), error_message.
+  - Webhook: channel_id, resource_id, expiration, token (nonce), last_webhook_at.
+  - Observação: agendas são criadas/compartilhadas com o profissional; não dependem do e-mail principal como agenda nativa; nomes/IDs da agenda geral vêm de variáveis de ambiente.
 - **EventoCalendar**
-  - Campos: id, agenda_id, alocacao_id (opcional), google_event_id, status (gravado, atualizado, conflito), origem (sistema/manual/google), data_sync.
+  - Campos: id, agenda_id, alocacao_id (opcional), google_event_id, etag, status (gravado, atualizado, conflito), origem (sistema/manual/google), source_of_truth, last_synced_at, last_update_from (google/sistema).
 
 ## Particularidades de sábado (Savassi/Lourdes)
 - Escala mensal é inserida manualmente (origem=manual, status=manual).

@@ -27,9 +27,12 @@ Base REST/JSON. Endpoints principais (prefixo `/api`):
 - `GET /prompts` — histórico.
 
 ## Google Calendar
-- `POST /calendar/sync` — lê agendas e traz conflitos.
+- `POST /calendar/sync` — lê agendas elegíveis (trigger manual admin-only). Body opcional: `{ calendar_id?, evento_id? }` para sync pontual.
 - `POST /calendar/publish` — publica apenas o que foi aprovado (default: eventos com origem sistema e status revisado/ajustado).
 - `POST /calendar/mark-conflict` — registra conflito detectado.
+- `POST /calendar/webhook` — endpoint público para callbacks do Google (valida headers/token, retorna 200/412).
+- `POST /calendar/webhook/refresh` — força renovação de canal (admin-only, usado em casos de falha).
+- `GET /calendar/status` — estado por agenda: ultimo_sync, webhook_expiration, falhas, status.
 
 ## Jobs
 - `GET /jobs` — lista execuções (geração semanal, confirmação diária, sync).
@@ -37,6 +40,7 @@ Base REST/JSON. Endpoints principais (prefixo `/api`):
 
 ## Autenticação/Autorização
 - Admin-only (JWT/session). Scopes: leitura/edição de cadastros, geração, publicação, trocas.
+- Ações manuais de sync/renovação de webhook restritas a admin.
 
 ## Erros/códigos
 - 400 validação (bloqueio violado, sobreposição, limite de horas).

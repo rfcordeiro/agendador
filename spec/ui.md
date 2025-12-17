@@ -6,7 +6,8 @@
 - Painel de inconsistências (sobreposição, bloqueio, estouro de horas, conflitos Google).
 - Prompt box com templates e pré-visualização de diff.
 - Diff viewer entre proposta e agenda atual.
-- Botões de ação: gerar, reexecutar, aprovar/publicar no Google, limpar futuro (dupla confirmação).
+- Botões de ação: gerar, reexecutar, aprovar/publicar no Google, limpar futuro (dupla confirmação), forçar sync do calendário (admin-only).
+- Indicadores por agenda: último sync, status do webhook (ok/expirando/expirado), falhas recentes.
 
 ## Fluxo de edição manual
 1) Selecionar intervalo; editar por drag-and-drop ou formulário.
@@ -30,3 +31,7 @@
 - Formulário para lançar escala mensal (data, turno, local, profissional).
 - Registrar trocas entre profissionais; validar conflitos; marcar origem (WhatsApp/manual).
 - Visual destacado para garantir que jobs automáticos não sobrescrevem essas entradas.
+
+## Sincronismo manual (admin)
+- Botão na visão da agenda para admin disparar `sync_calendar` (por agenda ou evento) em caso de divergência.
+- Exibir logs/resumo do último sync e último webhook recebido.
