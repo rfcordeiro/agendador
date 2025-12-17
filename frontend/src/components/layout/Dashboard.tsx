@@ -1,4 +1,5 @@
 import { useMemo, useState, useEffect, FormEvent } from 'react';
+import logoUrl from '../../assets/logo.png';
 import { User, ChangePasswordInput, ChangeEmailInput, Page } from '../../types';
 import { hasPermission } from '../../lib/auth';
 import { PermissionsWidget } from '../ui/PermissionsWidget';
@@ -187,12 +188,13 @@ export function Dashboard({
         id='primary-sidebar'
       >
         <div className='brand'>
-          <span className='brand-mark'>Ag</span>
+          <img src={logoUrl} alt="Agendador" className="brand-logo" />
           <div>
             <strong>Agendador</strong>
             <small>Escalas clínicas</small>
           </div>
         </div>
+
         <nav className='nav'>
           {navItems.map((item) => (
             <button

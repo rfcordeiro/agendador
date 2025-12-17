@@ -424,6 +424,12 @@ p {
   font-weight: 800;
 }
 
+.brand-logo {
+  width: 42px;
+  height: 42px;
+  object-fit: contain;
+}
+
 .nav {
   display: flex;
   flex-direction: column;
