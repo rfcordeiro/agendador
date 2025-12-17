@@ -37,4 +37,5 @@ urlpatterns = [
         name="email_change",
     ),
     path("api/cadastros/", include("cadastros.urls")),
+    path("api/escala/", include("escala.urls")),
 ]

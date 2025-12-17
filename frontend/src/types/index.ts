@@ -116,6 +116,9 @@ export interface ProfissionalCadastro {
   locais_proibidos: number[];
 }
 
+// Alias para compatibilidade com módulo escala
+export type Profissional = ProfissionalCadastro;
+
 export interface ProfissionalFormState {
   nome: string;
   email: string;
