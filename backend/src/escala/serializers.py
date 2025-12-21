@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
-from datetime import timedelta
-from typing import Any
+from datetime import date, timedelta
+from typing import Any, cast
 
+from cadastros.models import Local, Profissional, Sala
 from cadastros.serializers import LocalSerializer, ProfissionalSerializer, SalaSerializer
 from rest_framework import serializers
 
@@ -127,15 +128,14 @@ class AlocacaoSerializer(serializers.ModelSerializer):
 
     def _check_professional_overlap(self, alocacao: Alocacao) -> str | None:
         """Verifica se profissional já está alocado no mesmo turno/data."""
-        conflito = (
-            Alocacao.objects.filter(
-                profissional=alocacao.profissional,
-                data=alocacao.data,
-                turno=alocacao.turno,
-            )
-            .exclude(pk=alocacao.pk if alocacao.pk else None)
-            .first()
+        conflito_qs = Alocacao.objects.filter(
+            profissional=alocacao.profissional,
+            data=alocacao.data,
+            turno=alocacao.turno,
         )
+        if alocacao.pk is not None:
+            conflito_qs = conflito_qs.exclude(pk=alocacao.pk)
+        conflito = conflito_qs.first()
 
         if conflito:
             return f"{conflito.local.nome}/{conflito.sala.nome}"
@@ -153,7 +153,9 @@ class AlocacaoSerializer(serializers.ModelSerializer):
             profissional=alocacao.profissional,
             data__gte=inicio_semana,
             data__lte=fim_semana,
-        ).exclude(pk=alocacao.pk if alocacao.pk else None)
+        )
+        if alocacao.pk is not None:
+            alocacoes_semana = alocacoes_semana.exclude(pk=alocacao.pk)
 
         # Calcular horas (assumindo 6h por turno)
         horas_atuais = alocacoes_semana.count() * 6
@@ -175,28 +177,25 @@ class AlocacaoSerializer(serializers.ModelSerializer):
         # Contar dobras na semana (dias com 2 turnos)
         from django.db.models import Count
 
+        dobras_base_qs = Alocacao.objects.filter(
+            profissional=alocacao.profissional,
+            data__gte=inicio_semana,
+            data__lte=fim_semana,
+        )
+        if alocacao.pk is not None:
+            dobras_base_qs = dobras_base_qs.exclude(pk=alocacao.pk)
         dobras_semana = (
-            Alocacao.objects.filter(
-                profissional=alocacao.profissional,
-                data__gte=inicio_semana,
-                data__lte=fim_semana,
-            )
-            .exclude(pk=alocacao.pk if alocacao.pk else None)
-            .values("data")
-            .annotate(turnos=Count("id"))
-            .filter(turnos__gte=2)
-            .count()
+            dobras_base_qs.values("data").annotate(turnos=Count("id")).filter(turnos__gte=2).count()
         )
 
         # Verificar se esta alocação criará uma dobra
-        turnos_no_dia = (
-            Alocacao.objects.filter(
-                profissional=alocacao.profissional,
-                data=alocacao.data,
-            )
-            .exclude(pk=alocacao.pk if alocacao.pk else None)
-            .count()
+        turnos_dia_qs = Alocacao.objects.filter(
+            profissional=alocacao.profissional,
+            data=alocacao.data,
         )
+        if alocacao.pk is not None:
+            turnos_dia_qs = turnos_dia_qs.exclude(pk=alocacao.pk)
+        turnos_no_dia = turnos_dia_qs.count()
 
         if turnos_no_dia >= 1:
             dobras_semana += 1
@@ -232,24 +231,39 @@ class AlocacaoSerializer(serializers.ModelSerializer):
         # Verificar preferências de turno (soft warning)
         if prof.turno_preferencial and prof.turno_preferencial != alocacao.turno:
             turno_pref = prof.get_turno_preferencial_display()
-            return f"Turno diferente da preferência ({turno_pref}). " "Balanceamento mantido."
+            return f"Turno diferente da preferência ({turno_pref}). Balanceamento mantido."
 
         return None
 
     def validate(self, attrs: dict[str, Any]) -> dict[str, Any]:
         """Validação geral - apenas ERROS bloqueiam o salvamento."""
         instance = self.instance
+        profissional = cast(
+            Profissional | None, attrs.get("profissional", getattr(instance, "profissional", None))
+        )
+        local = cast(Local | None, attrs.get("local", getattr(instance, "local", None)))
+        sala = cast(Sala | None, attrs.get("sala", getattr(instance, "sala", None)))
+        data_value = cast(date | None, attrs.get("data", getattr(instance, "data", None)))
+        turno_value = cast(str | None, attrs.get("turno", getattr(instance, "turno", None)))
 
-        # Criar objeto temporário para validações
+        if (
+            profissional is None
+            or local is None
+            or sala is None
+            or data_value is None
+            or turno_value is None
+        ):
+            return attrs
+
         temp_alocacao = Alocacao(
-            profissional=attrs.get("profissional", getattr(instance, "profissional", None)),
-            local=attrs.get("local", getattr(instance, "local", None)),
-            sala=attrs.get("sala", getattr(instance, "sala", None)),
-            data=attrs.get("data", getattr(instance, "data", None)),
-            turno=attrs.get("turno", getattr(instance, "turno", None)),
+            profissional=profissional,
+            local=local,
+            sala=sala,
+            data=data_value,
+            turno=turno_value,
         )
         if instance:
-            temp_alocacao.pk = instance.pk  # type: ignore[union-attr]
+            temp_alocacao.pk = instance.pk
 
         errors = {}
 

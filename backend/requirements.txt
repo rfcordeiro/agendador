@@ -1,4 +1,4 @@
-Django==5.0.6
-djangorestframework==3.15.1
-psycopg2-binary==2.9.9
-whitenoise==6.7.0
+Django==6.0
+djangorestframework==3.16.1
+psycopg2-binary==2.9.11
+whitenoise==6.11.0

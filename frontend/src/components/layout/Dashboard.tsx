@@ -188,7 +188,7 @@ export function Dashboard({
         id='primary-sidebar'
       >
         <div className='brand'>
-          <img src={logoUrl} alt="Agendador" className="brand-logo" />
+          <img src={logoUrl} alt='Agendador' className='brand-logo' />
           <div>
             <strong>Agendador</strong>
             <small>Escalas clínicas</small>
