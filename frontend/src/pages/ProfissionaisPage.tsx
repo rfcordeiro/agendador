@@ -311,8 +311,7 @@ export function ProfissionaisPage() {
                       nome: profissional.nome,
                       email: profissional.email,
                       turno_preferencial: profissional.turno_preferencial,
-                      classificacao:
-                        profissional.classificacao || 'estagiaria',
+                      classificacao: profissional.classificacao || 'estagiaria',
                       valor_diaria:
                         profissional.valor_diaria !== null &&
                         profissional.valor_diaria !== undefined
@@ -365,11 +364,12 @@ export function ProfissionaisPage() {
                     type='button'
                     aria-haspopup='menu'
                     aria-expanded={openMenuId === profissional.id}
-                    onClick={() =>
+                    onClick={(event) => {
+                      event.stopPropagation();
                       setOpenMenuId(
                         openMenuId === profissional.id ? null : profissional.id,
-                      )
-                    }
+                      );
+                    }}
                   >
                     :
                   </button>
@@ -378,7 +378,10 @@ export function ProfissionaisPage() {
                       <button
                         type='button'
                         className='menu-item'
-                        onClick={() => toggleDestaque(profissional)}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          void toggleDestaque(profissional);
+                        }}
                       >
                         {profissional.destacado
                           ? 'Remover destaque'
@@ -443,12 +446,17 @@ export function ProfissionaisPage() {
                 Aparecem primeiro na tela e nas ações rápidas.
               </p>
             </div>
-            {renderProfissionaisTable(profissionaisDestacados, 'Nenhum destaque ainda.')}
+            {renderProfissionaisTable(
+              profissionaisDestacados,
+              'Nenhum destaque ainda.',
+            )}
           </div>
           <div className='table-card'>
             <div className='table-card__header'>
               <h3>Demais profissionais</h3>
-              <p className='muted small-print'>Continuam acessíveis normalmente.</p>
+              <p className='muted small-print'>
+                Continuam acessíveis normalmente.
+              </p>
             </div>
             {renderProfissionaisTable(
               profissionaisNaoDestacados,

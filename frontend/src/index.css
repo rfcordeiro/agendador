@@ -606,7 +606,8 @@ p {
   border-radius: var(--radius-card);
   background: #ffffff;
   box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
-  overflow: hidden;
+  overflow: visible;
+  position: relative;
 }
 
 .table-card__header {
