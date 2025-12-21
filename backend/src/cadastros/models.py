@@ -133,6 +133,7 @@ class Profissional(models.Model):
     inscricao_municipal = models.CharField(max_length=30, blank=True)
     data_contrato = models.DateField(null=True, blank=True)
     indisponibilidades = models.JSONField(default=list, blank=True)
+    destacado = models.BooleanField(default=False, help_text="Se aparece no topo da lista")
     locais_preferidos = models.ManyToManyField(
         Local, related_name="profissionais_preferidos", blank=True
     )
@@ -153,7 +154,7 @@ class Profissional(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ["nome"]
+        ordering = ["-destacado", "nome"]
 
     def __str__(self) -> str:
         return self.nome

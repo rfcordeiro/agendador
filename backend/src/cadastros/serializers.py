@@ -171,6 +171,7 @@ class ProfissionalSerializer(serializers.ModelSerializer):
             "inscricao_municipal",
             "data_contrato",
             "indisponibilidades",
+            "destacado",
             "locais_preferidos",
             "locais_proibidos",
             "carga_semanal_alvo",

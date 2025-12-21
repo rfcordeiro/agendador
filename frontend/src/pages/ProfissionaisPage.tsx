@@ -46,6 +46,7 @@ export function ProfissionaisPage() {
     limite_dobras_semana: 2,
     google_calendar_id: '',
     tags: '',
+    destacado: false,
     locais_preferidos: [] as number[],
     locais_proibidos: [] as number[],
   });
@@ -53,6 +54,7 @@ export function ProfissionaisPage() {
   const [showModal, setShowModal] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [editing, setEditing] = useState<ProfissionalCadastro | null>(null);
+  const [openMenuId, setOpenMenuId] = useState<number | null>(null);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -78,6 +80,15 @@ export function ProfissionaisPage() {
   useEffect(() => {
     void loadData();
   }, [loadData]);
+
+  const profissionaisDestacados = useMemo(
+    () => profissionais.filter((prof) => prof.destacado),
+    [profissionais],
+  );
+  const profissionaisNaoDestacados = useMemo(
+    () => profissionais.filter((prof) => !prof.destacado),
+    [profissionais],
+  );
 
   const classificacaoByValue = useMemo(
     () =>
@@ -147,6 +158,7 @@ export function ProfissionaisPage() {
         valor_vale_transporte: toNumberOrNull(form.valor_vale_transporte),
         comissao_sabado: toNumberOrNull(form.comissao_sabado),
         data_contrato: form.data_contrato || null,
+        destacado: form.destacado,
         tags: form.tags
           .split(',')
           .map((tag) => tag.trim())
@@ -189,6 +201,7 @@ export function ProfissionaisPage() {
         limite_dobras_semana: 2,
         google_calendar_id: '',
         tags: '',
+        destacado: false,
         locais_preferidos: [],
         locais_proibidos: [],
       });
@@ -201,6 +214,193 @@ export function ProfissionaisPage() {
       setError(message);
     }
   };
+
+  const toggleDestaque = async (profissional: ProfissionalCadastro) => {
+    setError(null);
+    try {
+      const updated = await updateProfissional(profissional.id, {
+        destacado: !profissional.destacado,
+      });
+      setProfissionais((prev) =>
+        prev.map((prof) => (prof.id === updated.id ? updated : prof)),
+      );
+      setSuccess(
+        updated.destacado
+          ? 'Profissional destacado.'
+          : 'Profissional removido dos destaques.',
+      );
+    } catch (exception) {
+      const message =
+        exception instanceof Error
+          ? exception.message
+          : 'Erro ao atualizar destaque.';
+      setError(message);
+    } finally {
+      setOpenMenuId(null);
+    }
+  };
+
+  const renderProfissionaisTable = (
+    lista: ProfissionalCadastro[],
+    emptyMessage: string,
+  ) => (
+    <table>
+      <thead>
+        <tr>
+          <th>Nome</th>
+          <th>Email</th>
+          <th>Classificação</th>
+          <th>Turno pref.</th>
+          <th>Carga alvo (h)</th>
+          <th>Dobras/semana</th>
+          <th>Tags</th>
+          <th>Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        {lista.map((profissional) => (
+          <tr key={profissional.id}>
+            <td>
+              <div className='name-cell'>
+                <span>{profissional.nome}</span>
+                {profissional.destacado ? (
+                  <span className='pill pill-soft small-pill'>Destaque</span>
+                ) : null}
+              </div>
+            </td>
+            <td className='muted'>{profissional.email}</td>
+            <td>
+              {profissional.classificacao ? (
+                <span
+                  className={`badge-class ${
+                    classificacaoByValue[profissional.classificacao]
+                      ?.badgeClass ?? ''
+                  }`}
+                >
+                  {classificacaoByValue[profissional.classificacao]?.label ??
+                    'Outro'}
+                </span>
+              ) : (
+                <span className='muted'>—</span>
+              )}
+            </td>
+            <td>{profissional.turno_preferencial || '—'}</td>
+            <td>{profissional.carga_semanal_alvo}</td>
+            <td>{profissional.limite_dobras_semana}</td>
+            <td>
+              {profissional.tags?.length ? (
+                <div className='chip-row inline-chips'>
+                  {profissional.tags.map((tag) => (
+                    <span key={tag} className='pill pill-soft'>
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <span className='muted'>—</span>
+              )}
+            </td>
+            <td>
+              <div className='actions-inline'>
+                <button
+                  className='ghost-button small'
+                  type='button'
+                  onClick={() => {
+                    setEditing(profissional);
+                    setForm({
+                      nome: profissional.nome,
+                      email: profissional.email,
+                      turno_preferencial: profissional.turno_preferencial,
+                      classificacao:
+                        profissional.classificacao || 'estagiaria',
+                      valor_diaria:
+                        profissional.valor_diaria !== null &&
+                        profissional.valor_diaria !== undefined
+                          ? String(profissional.valor_diaria)
+                          : '',
+                      valor_salario_mensal:
+                        profissional.valor_salario_mensal !== null &&
+                        profissional.valor_salario_mensal !== undefined
+                          ? String(profissional.valor_salario_mensal)
+                          : '',
+                      valor_vale_transporte:
+                        profissional.valor_vale_transporte !== null &&
+                        profissional.valor_vale_transporte !== undefined
+                          ? String(profissional.valor_vale_transporte)
+                          : '',
+                      comissao_sabado:
+                        profissional.comissao_sabado !== null &&
+                        profissional.comissao_sabado !== undefined
+                          ? String(profissional.comissao_sabado)
+                          : '',
+                      cpf: profissional.cpf || '',
+                      cnpj: profissional.cnpj || '',
+                      celular: profissional.celular || '',
+                      banco_nome: profissional.banco_nome || '',
+                      banco_agencia: profissional.banco_agencia || '',
+                      banco_conta: profissional.banco_conta || '',
+                      link_contrato: profissional.link_contrato || '',
+                      nome_empresarial: profissional.nome_empresarial || '',
+                      endereco_empresa: profissional.endereco_empresa || '',
+                      cnae: profissional.cnae || '',
+                      inscricao_municipal:
+                        profissional.inscricao_municipal || '',
+                      data_contrato: profissional.data_contrato || '',
+                      carga_semanal_alvo: profissional.carga_semanal_alvo,
+                      limite_dobras_semana: profissional.limite_dobras_semana,
+                      google_calendar_id: profissional.google_calendar_id,
+                      tags: (profissional.tags || []).join(', '),
+                      destacado: profissional.destacado,
+                      locais_preferidos: profissional.locais_preferidos || [],
+                      locais_proibidos: profissional.locais_proibidos || [],
+                    });
+                    setShowModal(true);
+                  }}
+                >
+                  Editar
+                </button>
+                <div className='actions-menu'>
+                  <button
+                    className='ghost-button small icon-only'
+                    type='button'
+                    aria-haspopup='menu'
+                    aria-expanded={openMenuId === profissional.id}
+                    onClick={() =>
+                      setOpenMenuId(
+                        openMenuId === profissional.id ? null : profissional.id,
+                      )
+                    }
+                  >
+                    :
+                  </button>
+                  {openMenuId === profissional.id ? (
+                    <div className='actions-menu-panel' role='menu'>
+                      <button
+                        type='button'
+                        className='menu-item'
+                        onClick={() => toggleDestaque(profissional)}
+                      >
+                        {profissional.destacado
+                          ? 'Remover destaque'
+                          : 'Destacar'}
+                      </button>
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+            </td>
+          </tr>
+        ))}
+        {!lista.length ? (
+          <tr>
+            <td colSpan={8} className='muted'>
+              {emptyMessage}
+            </td>
+          </tr>
+        ) : null}
+      </tbody>
+    </table>
+  );
 
   return (
     <section className='panel'>
@@ -235,127 +435,26 @@ export function ProfissionaisPage() {
       {loading ? (
         <p className='muted'>Carregando profissionais...</p>
       ) : (
-        <div className='table-card'>
-          <table>
-            <thead>
-              <tr>
-                <th>Nome</th>
-                <th>Email</th>
-                <th>Classificação</th>
-                <th>Turno pref.</th>
-                <th>Carga alvo (h)</th>
-                <th>Dobras/semana</th>
-                <th>Tags</th>
-                <th>Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {profissionais.map((profissional) => (
-                <tr key={profissional.id}>
-                  <td>{profissional.nome}</td>
-                  <td className='muted'>{profissional.email}</td>
-                  <td>
-                    {profissional.classificacao ? (
-                      <span
-                        className={`badge-class ${
-                          classificacaoByValue[profissional.classificacao]
-                            ?.badgeClass ?? ''
-                        }`}
-                      >
-                        {classificacaoByValue[profissional.classificacao]
-                          ?.label ?? 'Outro'}
-                      </span>
-                    ) : (
-                      <span className='muted'>—</span>
-                    )}
-                  </td>
-                  <td>{profissional.turno_preferencial || '—'}</td>
-                  <td>{profissional.carga_semanal_alvo}</td>
-                  <td>{profissional.limite_dobras_semana}</td>
-                  <td>
-                    {profissional.tags?.length ? (
-                      <div className='chip-row inline-chips'>
-                        {profissional.tags.map((tag) => (
-                          <span key={tag} className='pill pill-soft'>
-                            {tag}
-                          </span>
-                        ))}
-                      </div>
-                    ) : (
-                      <span className='muted'>—</span>
-                    )}
-                  </td>
-                  <td>
-                    <button
-                      className='ghost-button small'
-                      type='button'
-                      onClick={() => {
-                        setEditing(profissional);
-                        setForm({
-                          nome: profissional.nome,
-                          email: profissional.email,
-                          turno_preferencial: profissional.turno_preferencial,
-                          classificacao:
-                            profissional.classificacao || 'estagiaria',
-                          valor_diaria:
-                            profissional.valor_diaria !== null &&
-                            profissional.valor_diaria !== undefined
-                              ? String(profissional.valor_diaria)
-                              : '',
-                          valor_salario_mensal:
-                            profissional.valor_salario_mensal !== null &&
-                            profissional.valor_salario_mensal !== undefined
-                              ? String(profissional.valor_salario_mensal)
-                              : '',
-                          valor_vale_transporte:
-                            profissional.valor_vale_transporte !== null &&
-                            profissional.valor_vale_transporte !== undefined
-                              ? String(profissional.valor_vale_transporte)
-                              : '',
-                          comissao_sabado:
-                            profissional.comissao_sabado !== null &&
-                            profissional.comissao_sabado !== undefined
-                              ? String(profissional.comissao_sabado)
-                              : '',
-                          cpf: profissional.cpf || '',
-                          cnpj: profissional.cnpj || '',
-                          celular: profissional.celular || '',
-                          banco_nome: profissional.banco_nome || '',
-                          banco_agencia: profissional.banco_agencia || '',
-                          banco_conta: profissional.banco_conta || '',
-                          link_contrato: profissional.link_contrato || '',
-                          nome_empresarial: profissional.nome_empresarial || '',
-                          endereco_empresa: profissional.endereco_empresa || '',
-                          cnae: profissional.cnae || '',
-                          inscricao_municipal:
-                            profissional.inscricao_municipal || '',
-                          data_contrato: profissional.data_contrato || '',
-                          carga_semanal_alvo: profissional.carga_semanal_alvo,
-                          limite_dobras_semana:
-                            profissional.limite_dobras_semana,
-                          google_calendar_id: profissional.google_calendar_id,
-                          tags: (profissional.tags || []).join(', '),
-                          locais_preferidos:
-                            profissional.locais_preferidos || [],
-                          locais_proibidos: profissional.locais_proibidos || [],
-                        });
-                        setShowModal(true);
-                      }}
-                    >
-                      Editar
-                    </button>
-                  </td>
-                </tr>
-              ))}
-              {!profissionais.length ? (
-                <tr>
-                  <td colSpan={8} className='muted'>
-                    Nenhum profissional cadastrado.
-                  </td>
-                </tr>
-              ) : null}
-            </tbody>
-          </table>
+        <div className='table-stack'>
+          <div className='table-card'>
+            <div className='table-card__header'>
+              <h3>Profissionais destacados</h3>
+              <p className='muted small-print'>
+                Aparecem primeiro na tela e nas ações rápidas.
+              </p>
+            </div>
+            {renderProfissionaisTable(profissionaisDestacados, 'Nenhum destaque ainda.')}
+          </div>
+          <div className='table-card'>
+            <div className='table-card__header'>
+              <h3>Demais profissionais</h3>
+              <p className='muted small-print'>Continuam acessíveis normalmente.</p>
+            </div>
+            {renderProfissionaisTable(
+              profissionaisNaoDestacados,
+              'Nenhum profissional cadastrado.',
+            )}
+          </div>
         </div>
       )}
 

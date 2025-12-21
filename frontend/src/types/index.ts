@@ -112,6 +112,7 @@ export interface ProfissionalCadastro {
   carga_semanal_alvo: number;
   limite_dobras_semana: number;
   tags: string[];
+   destacado: boolean;
   locais_preferidos: number[];
   locais_proibidos: number[];
 }
@@ -144,6 +145,7 @@ export interface ProfissionalFormState {
   limite_dobras_semana: number;
   google_calendar_id: string;
   tags: string;
+   destacado: boolean;
   locais_preferidos: number[];
   locais_proibidos: number[];
 }
