@@ -302,62 +302,6 @@ export function ProfissionaisPage() {
             </td>
             <td>
               <div className='actions-inline'>
-                <button
-                  className='ghost-button small'
-                  type='button'
-                  onClick={() => {
-                    setEditing(profissional);
-                    setForm({
-                      nome: profissional.nome,
-                      email: profissional.email,
-                      turno_preferencial: profissional.turno_preferencial,
-                      classificacao: profissional.classificacao || 'estagiaria',
-                      valor_diaria:
-                        profissional.valor_diaria !== null &&
-                        profissional.valor_diaria !== undefined
-                          ? String(profissional.valor_diaria)
-                          : '',
-                      valor_salario_mensal:
-                        profissional.valor_salario_mensal !== null &&
-                        profissional.valor_salario_mensal !== undefined
-                          ? String(profissional.valor_salario_mensal)
-                          : '',
-                      valor_vale_transporte:
-                        profissional.valor_vale_transporte !== null &&
-                        profissional.valor_vale_transporte !== undefined
-                          ? String(profissional.valor_vale_transporte)
-                          : '',
-                      comissao_sabado:
-                        profissional.comissao_sabado !== null &&
-                        profissional.comissao_sabado !== undefined
-                          ? String(profissional.comissao_sabado)
-                          : '',
-                      cpf: profissional.cpf || '',
-                      cnpj: profissional.cnpj || '',
-                      celular: profissional.celular || '',
-                      banco_nome: profissional.banco_nome || '',
-                      banco_agencia: profissional.banco_agencia || '',
-                      banco_conta: profissional.banco_conta || '',
-                      link_contrato: profissional.link_contrato || '',
-                      nome_empresarial: profissional.nome_empresarial || '',
-                      endereco_empresa: profissional.endereco_empresa || '',
-                      cnae: profissional.cnae || '',
-                      inscricao_municipal:
-                        profissional.inscricao_municipal || '',
-                      data_contrato: profissional.data_contrato || '',
-                      carga_semanal_alvo: profissional.carga_semanal_alvo,
-                      limite_dobras_semana: profissional.limite_dobras_semana,
-                      google_calendar_id: profissional.google_calendar_id,
-                      tags: (profissional.tags || []).join(', '),
-                      destacado: profissional.destacado,
-                      locais_preferidos: profissional.locais_preferidos || [],
-                      locais_proibidos: profissional.locais_proibidos || [],
-                    });
-                    setShowModal(true);
-                  }}
-                >
-                  Editar
-                </button>
                 <div className='actions-menu'>
                   <button
                     className='ghost-button small icon-only'
@@ -371,10 +315,69 @@ export function ProfissionaisPage() {
                       );
                     }}
                   >
-                    :
+                    ⋮
                   </button>
                   {openMenuId === profissional.id ? (
                     <div className='actions-menu-panel' role='menu'>
+                      <button
+                        type='button'
+                        className='menu-item'
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setEditing(profissional);
+                          setForm({
+                            nome: profissional.nome,
+                            email: profissional.email,
+                            turno_preferencial: profissional.turno_preferencial,
+                            classificacao:
+                              profissional.classificacao || 'estagiaria',
+                            valor_diaria:
+                              profissional.valor_diaria !== null &&
+                              profissional.valor_diaria !== undefined
+                                ? String(profissional.valor_diaria)
+                                : '',
+                            valor_salario_mensal:
+                              profissional.valor_salario_mensal !== null &&
+                              profissional.valor_salario_mensal !== undefined
+                                ? String(profissional.valor_salario_mensal)
+                                : '',
+                            valor_vale_transporte:
+                              profissional.valor_vale_transporte !== null &&
+                              profissional.valor_vale_transporte !== undefined
+                                ? String(profissional.valor_vale_transporte)
+                                : '',
+                            comissao_sabado:
+                              profissional.comissao_sabado !== null &&
+                              profissional.comissao_sabado !== undefined
+                                ? String(profissional.comissao_sabado)
+                                : '',
+                            cpf: profissional.cpf || '',
+                            cnpj: profissional.cnpj || '',
+                            celular: profissional.celular || '',
+                            banco_nome: profissional.banco_nome || '',
+                            banco_agencia: profissional.banco_agencia || '',
+                            banco_conta: profissional.banco_conta || '',
+                            link_contrato: profissional.link_contrato || '',
+                            nome_empresarial: profissional.nome_empresarial || '',
+                            endereco_empresa: profissional.endereco_empresa || '',
+                            cnae: profissional.cnae || '',
+                            inscricao_municipal:
+                              profissional.inscricao_municipal || '',
+                            data_contrato: profissional.data_contrato || '',
+                            carga_semanal_alvo: profissional.carga_semanal_alvo,
+                            limite_dobras_semana: profissional.limite_dobras_semana,
+                            google_calendar_id: profissional.google_calendar_id,
+                            tags: (profissional.tags || []).join(', '),
+                            destacado: profissional.destacado,
+                            locais_preferidos: profissional.locais_preferidos || [],
+                            locais_proibidos: profissional.locais_proibidos || [],
+                          });
+                          setOpenMenuId(null);
+                          setShowModal(true);
+                        }}
+                      >
+                        Editar
+                      </button>
                       <button
                         type='button'
                         className='menu-item'
