@@ -132,3 +132,6 @@ compose-frontend-format:
 
 compose-frontend-typecheck:
 	docker compose run --rm frontend npm run typecheck
+
+compose-check-all: compose-backend-lint compose-backend-format compose-backend-typecheck compose-frontend-lint compose-frontend-format compose-frontend-typecheck
+	@echo "Todos os checks foram executados com sucesso"
