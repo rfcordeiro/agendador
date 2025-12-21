@@ -229,15 +229,18 @@ class ProfissionalSerializer(serializers.ModelSerializer):
         return _normalize_string_list(value)
 
     def validate(self, attrs: dict[str, Any]) -> dict[str, Any]:
+        instance = self.instance
         preferidos = set(attrs.get("locais_preferidos") or [])
         proibidos = set(attrs.get("locais_proibidos") or [])
         if preferidos & proibidos:
             raise serializers.ValidationError(
                 "Um local não pode ser ao mesmo tempo preferido e proibido."
             )
-        classificacao = attrs.get("classificacao") or getattr(self.instance, "classificacao", "")
-        valor_diaria = attrs.get("valor_diaria")
-        valor_salario = attrs.get("valor_salario_mensal")
+        classificacao = attrs.get("classificacao", getattr(instance, "classificacao", ""))
+        valor_diaria = attrs.get("valor_diaria", getattr(instance, "valor_diaria", None))
+        valor_salario = attrs.get(
+            "valor_salario_mensal", getattr(instance, "valor_salario_mensal", None)
+        )
         if valor_diaria and valor_salario:
             raise serializers.ValidationError("Informe apenas diária ou salário, não ambos.")
         if classificacao == ClassificacaoProfissional.ESTAGIARIA:
